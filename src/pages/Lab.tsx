@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { TOPICS } from '../types/topics';
 import CNNLab from './CNNLab';
 import ANNLab from './ANNLab';
+import RNNLab from './RNNLab';
 
 export const Lab: React.FC = () => {
   const { topicId } = useParams();
@@ -13,6 +14,7 @@ export const Lab: React.FC = () => {
 
   if (topicId === 'cnn') return <CNNLab />;
   if (topicId === 'ann') return <ANNLab />;
+  if (topicId === 'rnn') return <RNNLab />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
