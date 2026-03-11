@@ -1,0 +1,245 @@
+# CNN Learn - Interactive CNN Learning Platform
+
+## Project Overview
+
+A professional, TensorFlow Playground-style interactive web platform for learning Convolutional Neural Networks (CNNs) through visual simulations and hands-on experimentation.
+
+## Current Status
+
+✅ **Completed Features:**
+- Full CNN simulation engine (TypeScript-based, no ML libraries)
+- Interactive CNN architecture builder using React Flow
+- Feature map visualization system
+- Kernel editor with real-time preview
+- Training simulation dashboard with Recharts
+- 6 interactive learning lessons
+- Gamification system (XP, badges, challenges)
+- User dashboard and progress tracking
+- Leaderboard system
+- Landing page with modern design
+- Supabase database integration
+- Routing with React Router
+
+✅ **Working Components:**
+- Matrix operations (2D/3D creation, padding, normalization)
+- Convolution operations with configurable kernels
+- Pooling layers (max/average)
+- Activation functions (ReLU, Sigmoid, Tanh, Softmax)
+- Dense layers with weight initialization
+- Forward pass orchestration
+- Sample datasets (lines, circles, digits)
+
+## Tech Stack
+
+- **Framework**: React 18 + TypeScript + Vite
+- **State Management**: Zustand (with persist middleware)
+- **UI**: TailwindCSS + Custom components
+- **Visualization**: React Flow, Recharts, HTML Canvas
+- **Animation**: Framer Motion
+- **Database**: Supabase (PostgreSQL)
+- **Routing**: React Router v6
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── cnn/
+│   │   ├── CNNBuilder.tsx          ✅ Drag-drop architecture builder
+│   │   ├── KernelEditor.tsx        ✅ Real-time kernel editing
+│   │   └── TrainingDashboard.tsx   ✅ Training graphs
+│   ├── ui/
+│   │   ├── Button.tsx              ✅ Reusable button component
+│   │   └── Card.tsx                ✅ Card container
+│   └── visualization/
+│       └── FeatureMapGrid.tsx      ✅ Canvas-based visualization
+├── lib/
+│   ├── cnn/
+│   │   ├── activations.ts          ✅ ReLU, Sigmoid, Tanh, Softmax
+│   │   ├── convolution.ts          ✅ 2D convolution + preset kernels
+│   │   ├── pooling.ts              ✅ Max/Average pooling
+│   │   ├── dense.ts                ✅ Fully connected layers
+│   │   ├── matrix.ts               ✅ Matrix utilities
+│   │   └── forwardPass.ts          ✅ Network execution
+│   ├── datasets.ts                 ✅ Sample images
+│   └── supabase.ts                 ✅ Database client
+├── pages/
+│   ├── Landing.tsx                 ✅ Hero landing page
+│   ├── Lab.tsx                     ✅ Main experimentation environment
+│   ├── Lessons.tsx                 ✅ Interactive learning modules
+│   ├── Dashboard.tsx               ✅ User progress tracking
+│   └── Leaderboard.tsx             ✅ User rankings
+├── store/
+│   ├── cnnStore.ts                 ✅ CNN architecture state
+│   └── userStore.ts                ✅ User progress (persisted)
+└── types/
+    └── cnn.ts                      ✅ TypeScript definitions
+```
+
+## Key Features
+
+### 1. CNN Simulation Engine
+Pure TypeScript implementation:
+- No external ML libraries
+- Real-time forward pass computation
+- Support for complex architectures
+- Efficient matrix operations
+
+### 2. Interactive Lab
+- Drag-and-drop layer builder
+- Three main tabs:
+  - **Architecture Builder**: Visual network design
+  - **Training**: Simulated training with graphs
+  - **Kernel Visualizer**: Real-time kernel effects
+- Live feature map inspection
+- Parameter editing panel
+
+### 3. Learning System
+- 6 structured lessons covering fundamentals
+- Visual demonstrations with canvas rendering
+- Interactive examples
+- Progress tracking with XP rewards
+
+### 4. Gamification
+- XP and level system
+- 6 badges to unlock
+- 3 challenges with difficulty levels
+- Persistent progress (localStorage + Supabase)
+
+### 5. Visualization
+- Feature map heatmaps
+- Real-time kernel convolution preview
+- Training loss/accuracy curves
+- Layer-by-layer output inspection
+
+## Database Schema
+
+### Tables
+
+**user_progress**
+- Tracks XP, level, completed lessons, badges, challenges
+- Row-level security enabled
+- Users can only access their own data
+
+**leaderboard**
+- Public rankings by XP
+- Auto-updating with triggers
+- Read-only for non-owners
+
+## Future Enhancements
+
+### Priority Improvements
+1. **Receptive Field Visualizer**: Show which input pixels affect each neuron
+2. **Backpropagation Visualization**: Gradient flow animation
+3. **Web Workers**: Offload heavy computation for better performance
+4. **RGB Image Support**: Extend to 3-channel color images
+5. **More Datasets**: Add Fashion-MNIST and CIFAR samples
+6. **Export/Import**: Save and share architectures
+7. **Model Comparison**: Side-by-side architecture comparison
+8. **Advanced Metrics**: Receptive field calculator, FLOPs counter
+
+### UI/UX Improvements
+1. **Layer Parameter Panel**: Dedicated sidebar for editing selected layers
+2. **Architecture Templates**: Pre-built networks (LeNet, AlexNet-style)
+3. **Guided Tours**: Interactive walkthroughs for new users
+4. **Mobile Responsive**: Better mobile/tablet layout
+5. **Dark Mode**: Theme toggle
+6. **Keyboard Shortcuts**: Power user features
+
+### Learning Content
+1. **Mini Quizzes**: Test understanding after each lesson
+2. **Code Export**: Generate PyTorch/TensorFlow code from architecture
+3. **Video Tutorials**: Embedded explanations
+4. **Advanced Topics**: Transfer learning, data augmentation concepts
+
+### Performance
+1. **Lazy Loading**: Code-split by route
+2. **Virtual Scrolling**: For large feature map grids
+3. **WebGL Rendering**: Hardware-accelerated visualization
+4. **Caching**: Memoize expensive computations
+
+## Development Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Development server
+npm run dev
+
+# Production build
+npm run build
+
+# Type checking
+npm run typecheck
+
+# Linting
+npm run lint
+```
+
+## Environment Variables
+
+Required in `.env`:
+```
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+## Architecture Decisions
+
+### Why Vite + React (not Next.js)?
+- Faster development experience
+- Simpler deployment (static export)
+- Client-side only (no server needed for simulation)
+- Better for educational interactive tools
+
+### Why Pure TypeScript CNN Engine?
+- No external dependencies
+- Transparent implementation for learning
+- Works entirely in browser
+- Easy to inspect and modify
+
+### Why Zustand?
+- Lightweight (1KB)
+- Simple API
+- Built-in persistence
+- No boilerplate
+
+### Why Canvas for Visualization?
+- Pixel-perfect rendering
+- Fast for grid-based data
+- Direct image data manipulation
+- Efficient for feature maps
+
+## Known Limitations
+
+1. **Performance**: Large architectures (100+ layers) may slow down
+2. **Image Size**: Optimized for 28x28 images (MNIST-sized)
+3. **No Real Training**: Simulated only (no gradient descent)
+4. **Single Precision**: No GPU acceleration
+5. **Browser Memory**: Very deep networks may hit memory limits
+
+## Contributing Guidelines
+
+When adding new features:
+1. Follow existing file structure
+2. Add TypeScript types
+3. Use existing UI components
+4. Test with different architectures
+5. Update this prompt file
+
+## Success Metrics
+
+The platform is successful if users can:
+- Understand convolution operations visually
+- Build and experiment with CNN architectures
+- See how layers transform data
+- Complete all learning modules
+- Experiment with different configurations
+
+## References
+
+- TensorFlow Playground: https://playground.tensorflow.org/
+- ConvNetJS: https://cs.stanford.edu/people/karpathy/convnetjs/
+- Distill.pub CNN articles
+- 3Blue1Brown neural network series

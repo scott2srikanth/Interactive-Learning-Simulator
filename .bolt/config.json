@@ -1,0 +1,25 @@
+{
+  "name": "CNN Learn",
+  "description": "Interactive CNN Learning Platform - TensorFlow Playground for CNNs",
+  "version": "1.0.0",
+  "type": "educational-platform",
+  "framework": "react-vite",
+  "features": {
+    "cnn_simulation": true,
+    "interactive_learning": true,
+    "gamification": true,
+    "visualization": true,
+    "real_time_feedback": true
+  },
+  "tech_stack": {
+    "frontend": "React + TypeScript + Vite",
+    "state": "Zustand",
+    "styling": "TailwindCSS",
+    "visualization": ["React Flow", "Recharts", "Canvas"],
+    "animation": "Framer Motion",
+    "database": "Supabase",
+    "routing": "React Router"
+  },
+  "status": "production-ready",
+  "last_updated": "2026-03-11"
+}
