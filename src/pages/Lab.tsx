@@ -7,6 +7,7 @@ import CNNLab from './CNNLab';
 import ANNLab from './ANNLab';
 import RNNLab from './RNNLab';
 import VAELab from './VAELab';
+import TransformerLab from './TransformerLab';
 
 export const Lab: React.FC = () => {
   const { topicId } = useParams();
@@ -17,6 +18,7 @@ export const Lab: React.FC = () => {
   if (topicId === 'ann') return <ANNLab />;
   if (topicId === 'rnn') return <RNNLab />;
   if (topicId === 'vae') return <VAELab />;
+  if (topicId === 'transformers') return <TransformerLab />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
