@@ -390,17 +390,134 @@ function ReparamLab() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   TRANSFORMER LESSON LABS
+   TRANSFORMER LESSON LABS — 6 distinct labs
    ═══════════════════════════════════════════════════════════ */
-function AttentionLab() {
-  const tokens = ['The', 'cat', 'sat', 'on', 'mat'];
+
+// tf-1: RNN vs Transformer comparison
+function TFComparisonLab() {
+  const tokens = ['Attention', 'is', 'all', 'you', 'need'];
+  const [step, setStep] = useState(0);
+  const [mode, setMode] = useState<'rnn'|'transformer'>('rnn');
+  useEffect(() => { const t = setInterval(() => setStep(p => (p + 1) % tokens.length), 800); return () => clearInterval(t); }, []);
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 mb-4">{['rnn','transformer'].map(m => <button key={m} onClick={() => setMode(m as any)} className={`px-4 py-2 rounded text-xs font-bold ${mode === m ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-gray-400'}`}>{m === 'rnn' ? '🔄 RNN (Sequential)' : '⚡ Transformer (Parallel)'}</button>)}</div>
+      <div className="p-4 bg-gray-900 rounded-lg">
+        <p className="text-xs text-gray-400 mb-3">{mode === 'rnn' ? 'RNN processes tokens one-by-one, left to right:' : 'Transformer processes ALL tokens simultaneously:'}</p>
+        <div className="flex gap-3 items-center flex-wrap">
+          {tokens.map((t, i) => {
+            const active = mode === 'rnn' ? i <= step : true;
+            const current = mode === 'rnn' ? i === step : true;
+            return (
+              <div key={i} className="text-center">
+                <div className={`px-3 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${active ? (current ? 'bg-yellow-500 text-black scale-110' : 'bg-blue-600 text-white') : 'bg-gray-800 text-gray-600'}`} style={{ transform: current && mode === 'rnn' ? 'scale(1.1)' : 'scale(1)' }}>{t}</div>
+                <p className="text-xs mt-1" style={{ color: active ? '#22c55e' : '#475569' }}>{active ? '✓' : '⏳'}</p>
+              </div>
+            );
+          })}
+        </div>
+        {mode === 'rnn' && <div className="mt-3 flex items-center gap-2"><span className="text-xs text-orange-400">Hidden state h →</span><div className="h-2 bg-orange-500 rounded" style={{ width: `${((step + 1) / tokens.length) * 100}%`, maxWidth: 200, transition: 'width 0.5s' }} /><span className="text-xs text-gray-500">carries ALL info</span></div>}
+        {mode === 'transformer' && <div className="mt-3"><p className="text-xs text-green-400">Every token sees every other token directly via attention — no bottleneck!</p><div className="flex gap-1 mt-2">{tokens.map((_, i) => <div key={i} className="flex gap-0.5">{tokens.map((_, j) => <div key={j} className="w-3 h-3 rounded-sm" style={{ background: `rgba(59,130,246,${0.2 + Math.random() * 0.6})` }} />)}</div>)}</div></div>}
+      </div>
+      <div className="p-3 rounded-lg" style={{ background: mode === 'rnn' ? '#7f1d1d22' : '#052e1622', border: `1px solid ${mode === 'rnn' ? '#dc262633' : '#16a34a33'}` }}>
+        <p className="text-xs text-gray-300">{mode === 'rnn' ? '❌ Sequential → slow, can\'t parallelize. Token 5 must wait for tokens 1-4. Long-range dependencies lost through bottleneck.' : '✅ Parallel → fast on GPUs. Every token directly attends to every other. No information bottleneck. O(n²) attention but highly parallelizable.'}</p>
+      </div>
+    </div>
+  );
+}
+
+// tf-2: Embedding Viewer
+function EmbeddingLab() {
+  const [inputText, setInputText] = useState('king queen man woman');
+  const tokens = inputText.toLowerCase().split(/\s+/).filter(t => t);
+  const dModel = 6;
+  // Deterministic embeddings based on char codes
+  const embed = (t: string) => Array(dModel).fill(0).map((_, d) => Math.sin(t.charCodeAt(d % t.length) * 0.37 + d * 1.7) * 0.8);
+  const embeddings = tokens.map(embed);
+  // Cosine similarity
+  const cosine = (a: number[], b: number[]) => { const dot = a.reduce((s, v, i) => s + v * b[i], 0); const ma = Math.sqrt(a.reduce((s, v) => s + v * v, 0)); const mb = Math.sqrt(b.reduce((s, v) => s + v * v, 0)); return dot / (ma * mb + 1e-8); };
+  const simMatrix = tokens.map((_, i) => tokens.map((_, j) => cosine(embeddings[i], embeddings[j])));
+
+  return (
+    <div className="space-y-4">
+      <div><label className="text-xs text-gray-400">Enter tokens (space-separated):</label><input value={inputText} onChange={e => setInputText(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg text-sm bg-gray-800 text-white border border-gray-600" /></div>
+      <p className="text-xs text-gray-400">Each token → {dModel}-dim embedding vector:</p>
+      <div className="space-y-2">{tokens.slice(0, 6).map((t, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <span className="text-xs font-bold text-green-400 w-16 text-right font-mono">"{t}"</span>
+          <span className="text-gray-600">→</span>
+          <div className="flex gap-1">{embeddings[i].map((v, j) => <div key={j} className="w-10 h-6 rounded text-center text-xs font-mono font-bold flex items-center justify-center" style={{ background: `rgba(59,130,246,${Math.abs(v) * 0.7 + 0.1})`, color: '#fff' }}>{v.toFixed(2)}</div>)}</div>
+        </div>
+      ))}</div>
+      {tokens.length >= 2 && (
+        <div>
+          <p className="text-xs text-gray-400 mt-4 mb-2">Cosine Similarity Matrix (similar tokens → higher value):</p>
+          <div className="inline-grid gap-1" style={{ gridTemplateColumns: `60px repeat(${tokens.length}, 48px)` }}>
+            <div />
+            {tokens.map((t, j) => <div key={j} className="text-center text-xs font-bold text-blue-400 truncate">{t.slice(0, 5)}</div>)}
+            {tokens.map((t, i) => (<React.Fragment key={i}><div className="text-xs font-bold text-blue-400 text-right pr-1 self-center">{t.slice(0, 5)}</div>{simMatrix[i].map((v, j) => <div key={j} className="h-8 rounded flex items-center justify-center text-xs font-mono font-bold" style={{ background: `rgba(${v > 0.7 ? '34,197,94' : v > 0.3 ? '250,204,21' : '239,68,68'},${Math.abs(v) * 0.6 + 0.15})`, color: '#fff' }}>{v.toFixed(2)}</div>)}</React.Fragment>))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// tf-3: Positional Encoding visualizer
+function PELab() {
+  const [dModel, setDModel] = useState(8);
+  const [seqLen, setSeqLen] = useState(10);
+  const ref = useRef<HTMLCanvasElement>(null);
+  const pe: number[][] = [];
+  for (let pos = 0; pos < seqLen; pos++) { const row: number[] = []; for (let i = 0; i < dModel; i++) { row.push(i % 2 === 0 ? Math.sin(pos / Math.pow(10000, i / dModel)) : Math.cos(pos / Math.pow(10000, (i - 1) / dModel))); } pe.push(row); }
+
+  useEffect(() => {
+    const c = ref.current; if (!c) return;
+    const W = 320, H = 180; c.width = W; c.height = H;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
+    const cw = (W - 40) / dModel, ch = (H - 30) / seqLen;
+    for (let i = 0; i < seqLen; i++) for (let j = 0; j < dModel; j++) {
+      const v = (pe[i][j] + 1) / 2;
+      ctx.fillStyle = `hsl(${v * 240}, 80%, ${25 + v * 45}%)`;
+      ctx.fillRect(35 + j * cw, 20 + i * ch, cw - 0.5, ch - 0.5);
+    }
+    ctx.fillStyle = '#94a3b8'; ctx.font = '8px monospace'; ctx.textAlign = 'right';
+    for (let i = 0; i < seqLen; i++) ctx.fillText(`pos ${i}`, 32, 20 + i * ch + ch / 2 + 3);
+    ctx.textAlign = 'center';
+    for (let j = 0; j < dModel; j++) ctx.fillText(`d${j}`, 35 + j * cw + cw / 2, 14);
+    ctx.fillText('dim →', W / 2, H - 4); ctx.save(); ctx.translate(8, H / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('position →', 0, 0); ctx.restore();
+  }, [dModel, seqLen, pe]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-4 flex-wrap">
+        <label className="text-xs text-gray-400">Dimensions: <b className="text-white">{dModel}</b><input type="range" min={4} max={16} step={2} value={dModel} onChange={e => setDModel(+e.target.value)} className="ml-2 w-24" /></label>
+        <label className="text-xs text-gray-400">Seq Length: <b className="text-white">{seqLen}</b><input type="range" min={4} max={20} value={seqLen} onChange={e => setSeqLen(+e.target.value)} className="ml-2 w-24" /></label>
+      </div>
+      <canvas ref={ref} style={{ width: 320, height: 180, borderRadius: 8, border: '1px solid #334155' }} />
+      <p className="text-xs text-gray-400">Each row is a unique positional signature. Sine waves have different frequencies per dimension — the model can learn to compute relative positions from these patterns.</p>
+      <div className="p-3 bg-gray-900 rounded-lg text-xs font-mono">
+        <p className="text-cyan-400">PE(pos, 2i) = sin(pos / 10000^(2i/{dModel}))</p>
+        <p className="text-orange-400">PE(pos, 2i+1) = cos(pos / 10000^(2i/{dModel}))</p>
+      </div>
+      <p className="text-xs text-gray-400">Sample — Position 0: [{pe[0]?.map(v => v.toFixed(2)).join(', ')}]</p>
+      <p className="text-xs text-gray-400">Position {seqLen - 1}: [{pe[seqLen - 1]?.map(v => v.toFixed(2)).join(', ')}]</p>
+    </div>
+  );
+}
+
+// tf-4: Self-Attention Q,K,V Lab (the existing one, enhanced)
+function SelfAttentionLab() {
+  const [sentence, setSentence] = useState('The cat sat on mat');
+  const tokens = sentence.toLowerCase().split(/\s+/).filter(t => t);
   const n = tokens.length;
-  // Simulate Q·K^T scores
-  const scores: number[][] = tokens.map((_, i) => tokens.map((_, j) => Math.sin(i * 3.7 + j * 2.1) * 0.5 + (i === j ? 1 : 0)));
   const dk = 4;
+  const scores: number[][] = tokens.map((_, i) => tokens.map((_, j) => Math.sin(i * 3.7 + j * 2.1) * 0.5 + (i === j ? 1 : 0)));
   const scaled = scores.map(row => row.map(v => v / Math.sqrt(dk)));
   const attnWeights = scaled.map(row => { const mx = Math.max(...row); const e = row.map(v => Math.exp(v - mx)); const s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); });
   const [selTok, setSelTok] = useState(1);
+  const [showStep, setShowStep] = useState<'qkv'|'scores'|'softmax'>('softmax');
 
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -408,38 +525,127 @@ function AttentionLab() {
     const size = 220; c.width = size; c.height = size;
     const ctx = c.getContext('2d')!;
     ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, size, size);
+    const data = showStep === 'scores' ? scaled : attnWeights;
     const off = 40, cs = (size - off) / n;
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-      const v = attnWeights[i][j];
-      ctx.fillStyle = `rgba(59,130,246,${v * 0.9 + 0.05})`;
+      const v = data[i]?.[j] || 0; const av = showStep === 'scores' ? (v + 2) / 4 : v;
+      ctx.fillStyle = `rgba(59,130,246,${Math.max(0, av) * 0.9 + 0.05})`;
       ctx.fillRect(off + j * cs, off + i * cs, cs - 1, cs - 1);
-      ctx.fillStyle = v > 0.25 ? '#fff' : '#64748b'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(v.toFixed(2), off + j * cs + cs / 2, off + i * cs + cs / 2);
+      if (n <= 8) { ctx.fillStyle = av > 0.3 ? '#fff' : '#64748b'; ctx.font = `bold ${Math.min(10, cs * 0.35)}px monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(v.toFixed(2), off + j * cs + cs / 2, off + i * cs + cs / 2); }
     }
     ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    for (let i = 0; i < n; i++) ctx.fillText(tokens[i], off - 3, off + i * cs + cs / 2);
+    for (let i = 0; i < n; i++) ctx.fillText(tokens[i].slice(0, 5), off - 3, off + i * cs + cs / 2);
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    for (let j = 0; j < n; j++) { ctx.save(); ctx.translate(off + j * cs + cs / 2, off - 3); ctx.rotate(-0.4); ctx.fillText(tokens[j], 0, 0); ctx.restore(); }
-  }, [attnWeights, n]);
+    for (let j = 0; j < n; j++) { ctx.save(); ctx.translate(off + j * cs + cs / 2, off - 3); ctx.rotate(-0.4); ctx.fillText(tokens[j].slice(0, 5), 0, 0); ctx.restore(); }
+  }, [attnWeights, scaled, n, showStep, tokens]);
 
   return (
     <div className="space-y-4">
+      <input value={sentence} onChange={e => setSentence(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm bg-gray-800 text-white border border-gray-600" placeholder="Enter a sentence..." />
+      <div className="flex gap-2">{(['qkv','scores','softmax'] as const).map(s => <button key={s} onClick={() => setShowStep(s)} className={`px-3 py-1 rounded text-xs font-bold ${showStep === s ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>{s === 'qkv' ? '🔑 Q·Kᵀ' : s === 'scores' ? '📊 Scaled Scores' : '🎯 Softmax Weights'}</button>)}</div>
       <div className="flex gap-6 items-start flex-wrap">
         <canvas ref={ref} style={{ width: 220, height: 220, borderRadius: 8, border: '1px solid #334155' }} />
         <div>
-          <p className="text-xs text-gray-400 mb-2">Click a token to see its attention:</p>
-          <div className="flex gap-2 mb-3">{tokens.map((t, i) => <button key={i} onClick={() => setSelTok(i)} className={`px-2 py-1 rounded text-xs font-bold ${i === selTok ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>{t}</button>)}</div>
-          <p className="text-xs text-blue-400 font-mono mb-2">"{tokens[selTok]}" attends to:</p>
+          <p className="text-xs text-gray-400 mb-2">Token attention distribution:</p>
+          <div className="flex gap-2 mb-3 flex-wrap">{tokens.map((t, i) => <button key={i} onClick={() => setSelTok(i)} className={`px-2 py-1 rounded text-xs font-bold ${i === selTok ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>{t}</button>)}</div>
           {tokens.map((t, j) => (
-            <div key={j} className="flex items-center gap-2 mb-1">
-              <span className="text-xs text-gray-500 w-10 text-right font-mono">{t}</span>
-              <div className="flex-1 h-4 bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 150 }}>
-                <div className="h-full bg-blue-500 rounded" style={{ width: `${attnWeights[selTok][j] * 100}%` }} />
-              </div>
-              <span className="text-xs text-gray-400 font-mono w-10">{(attnWeights[selTok][j] * 100).toFixed(0)}%</span>
-            </div>
+            <div key={j} className="flex items-center gap-2 mb-1"><span className="text-xs text-gray-500 w-12 text-right font-mono">{t}</span><div className="flex-1 h-4 bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 140 }}><div className="h-full bg-blue-500 rounded" style={{ width: `${attnWeights[selTok]?.[j] * 100 || 0}%` }} /></div><span className="text-xs text-gray-400 font-mono w-10">{((attnWeights[selTok]?.[j] || 0) * 100).toFixed(0)}%</span></div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// tf-5: Multi-Head Attention
+function MultiHeadLab() {
+  const tokens = ['I', 'love', 'deep', 'learning'];
+  const n = tokens.length;
+  const numHeads = 4;
+  const headNames = ['Syntax', 'Semantics', 'Position', 'Context'];
+  // Generate different patterns for each head
+  const heads = Array.from({ length: numHeads }).map((_, h) =>
+    tokens.map((_, i) => { const row = tokens.map((_, j) => Math.exp(Math.sin(i * (h + 1) * 2.3 + j * (h + 1) * 1.7) + (i === j ? 0.5 : 0))); const s = row.reduce((a, b) => a + b, 0); return row.map(v => v / s); })
+  );
+  const [selHead, setSelHead] = useState(0);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-gray-400">Each head learns a <b className="text-white">different type of relationship</b> between tokens:</p>
+      <div className="flex gap-2 flex-wrap">{headNames.map((name, h) => <button key={h} onClick={() => setSelHead(h)} className={`px-3 py-1.5 rounded text-xs font-bold ${selHead === h ? 'bg-yellow-600 text-black' : 'bg-gray-800 text-gray-400'}`}>Head {h + 1}: {name}</button>)}</div>
+      <div className="flex gap-6 items-start flex-wrap">
+        {/* Selected head heatmap */}
+        <div>
+          <p className="text-xs font-bold text-yellow-400 mb-2">Head {selHead + 1}: {headNames[selHead]}</p>
+          <div className="inline-grid gap-1" style={{ gridTemplateColumns: `50px repeat(${n}, 44px)` }}>
+            <div />{tokens.map((t, j) => <div key={j} className="text-center text-xs font-bold text-blue-400">{t}</div>)}
+            {tokens.map((t, i) => (<React.Fragment key={i}><div className="text-xs font-bold text-blue-400 text-right pr-1 self-center">{t}</div>{heads[selHead][i].map((v, j) => <div key={j} className="h-8 rounded flex items-center justify-center text-xs font-mono font-bold" style={{ background: `rgba(59,130,246,${v * 0.85 + 0.05})`, color: v > 0.2 ? '#fff' : '#64748b' }}>{v.toFixed(2)}</div>)}</React.Fragment>))}
+          </div>
+        </div>
+        {/* All heads side-by-side mini */}
+        <div>
+          <p className="text-xs font-bold text-gray-400 mb-2">All {numHeads} heads compared:</p>
+          <div className="flex gap-3">
+            {heads.map((head, h) => (
+              <div key={h} className="text-center cursor-pointer" onClick={() => setSelHead(h)} style={{ opacity: h === selHead ? 1 : 0.5 }}>
+                <div className="inline-grid gap-0.5" style={{ gridTemplateColumns: `repeat(${n}, 16px)` }}>
+                  {head.flat().map((v, i) => <div key={i} className="w-4 h-4 rounded-sm" style={{ background: `rgba(59,130,246,${v * 0.9 + 0.05})` }} />)}
+                </div>
+                <p className="text-xs mt-1" style={{ color: h === selHead ? '#facc15' : '#475569' }}>{headNames[h]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="p-3 bg-gray-900 rounded-lg text-xs font-mono text-gray-400">
+        MultiHead = Concat(Head₁, Head₂, Head₃, Head₄) × W_O → <span className="text-green-400">[{n}×{n * 2}] → [{n}×{n * 2}]</span>
+      </div>
+    </div>
+  );
+}
+
+// tf-6: Full Transformer Block
+function TransformerBlockLab() {
+  const tokens = ['The', 'cat', 'sat'];
+  const dModel = 4;
+  const [curStage, setCurStage] = useState(0);
+  const stages = ['Input+PE', 'Multi-Head Attn', 'Add & Norm', 'Feed-Forward', 'Add & Norm', 'Output'];
+  // Simulate values at each stage
+  const vals = tokens.map((_, i) => Array(dModel).fill(0).map((_, d) => Math.sin(i * 2.3 + d * 1.7) * 0.5));
+  const stageVals = stages.map((_, s) => tokens.map((_, i) => Array(dModel).fill(0).map((_, d) => Math.sin(i * 2.3 + d * 1.7 + s * 0.8) * (0.5 + s * 0.1))));
+  const stageColors = ['#22c55e', '#f59e0b', '#64748b', '#ec4899', '#64748b', '#22c55e'];
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-gray-400">Click each stage to see the tensor values flowing through:</p>
+      <div className="flex gap-1 items-center flex-wrap">
+        {stages.map((s, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <span className="text-gray-600 text-xs">→</span>}
+            <button onClick={() => setCurStage(i)} className="px-2 py-1.5 rounded text-xs font-bold transition-all" style={{ background: curStage === i ? stageColors[i] : '#1e293b', color: curStage === i ? (i === 2 || i === 4 ? '#fff' : '#000') : '#64748b', border: `1px solid ${curStage === i ? stageColors[i] : '#334155'}` }}>{s}</button>
+          </React.Fragment>
+        ))}
+      </div>
+      <div className="p-4 bg-gray-900 rounded-lg">
+        <p className="text-xs font-bold mb-3" style={{ color: stageColors[curStage] }}>Stage: {stages[curStage]} — tensor [{tokens.length}×{dModel}]</p>
+        {tokens.map((t, i) => (
+          <div key={i} className="flex items-center gap-3 mb-2">
+            <span className="text-xs font-bold text-green-400 w-10 text-right">"{t}"</span>
+            <div className="flex gap-1">
+              {stageVals[curStage][i].map((v, d) => (
+                <div key={d} className="w-12 h-7 rounded flex items-center justify-center text-xs font-mono font-bold" style={{ background: `${stageColors[curStage]}${Math.round(Math.abs(v) * 150 + 40).toString(16).padStart(2, '0')}`, color: '#fff' }}>{v.toFixed(2)}</div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="p-3 rounded-lg bg-gray-900 text-xs text-gray-400">
+        {curStage === 0 && 'Embeddings + Positional Encoding → position-aware token representations.'}
+        {curStage === 1 && 'Multi-Head Self-Attention: every token attends to every other token via Q·Kᵀ/√dₖ softmax.'}
+        {curStage === 2 && 'Residual connection (x + attention(x)) followed by Layer Normalization.'}
+        {curStage === 3 && 'Feed-Forward Network: two linear layers with ReLU. Applied per-position independently.'}
+        {curStage === 4 && 'Second residual connection (x + FFN(x)) followed by Layer Normalization.'}
+        {curStage === 5 && 'Final output: each token now carries context from ALL other tokens. Ready for next block or output.'}
       </div>
     </div>
   );
@@ -473,12 +679,12 @@ const LESSON_LABS: Record<string, { title: string; component: React.FC }> = {
   'vae-4': { title: 'Reparameterization Trick', component: ReparamLab },
   'vae-5': { title: 'Loss Calculator', component: ReparamLab },
   'vae-6': { title: 'Interpolation Lab', component: ReparamLab },
-  'tf-1': { title: 'Attention vs RNN', component: AttentionLab },
-  'tf-2': { title: 'Embedding Viewer', component: AttentionLab },
-  'tf-3': { title: 'Positional Encoding', component: AttentionLab },
-  'tf-4': { title: 'Self-Attention Lab', component: AttentionLab },
-  'tf-5': { title: 'Multi-Head Attention', component: AttentionLab },
-  'tf-6': { title: 'Transformer Block', component: AttentionLab },
+  'tf-1': { title: 'RNN vs Transformer', component: TFComparisonLab },
+  'tf-2': { title: 'Embedding Viewer', component: EmbeddingLab },
+  'tf-3': { title: 'Positional Encoding Lab', component: PELab },
+  'tf-4': { title: 'Self-Attention Q,K,V', component: SelfAttentionLab },
+  'tf-5': { title: 'Multi-Head Attention', component: MultiHeadLab },
+  'tf-6': { title: 'Transformer Block', component: TransformerBlockLab },
 };
 
 /* ═══════════════════════════════════════════════════════════
