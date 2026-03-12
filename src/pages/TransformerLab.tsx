@@ -476,12 +476,10 @@ export default function TransformerLab() {
       <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
       <style>{`*::-webkit-scrollbar{width:5px} *::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}`}</style>
 
-      <div style={{ position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(16px)", background: "rgba(2,6,23,0.88)", borderBottom: "1px solid #1e293b" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "8px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, background: "linear-gradient(135deg,#f59e0b,#a855f7)" }}>⚡</div>
-          <h1 style={{ fontSize: 15, fontWeight: 800, color: "#fff", margin: 0 }}>Transformer Lab</h1>
-          <span style={{ fontSize: 10, color: "#475569" }}>Interactive Self-Attention Simulator</span>
-        </div>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "8px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, background: "linear-gradient(135deg,#f59e0b,#a855f7)" }}>⚡</div>
+        <h1 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>Transformer Lab</h1>
+        <span style={{ fontSize: 10 }}>Interactive Self-Attention Simulator</span>
       </div>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "16px 20px" }}>

@@ -560,19 +560,17 @@ export default function VAELab() {
       <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
       <style>{`*::-webkit-scrollbar{width:5px} *::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}`}</style>
 
-      {/* Top bar */}
-      <div style={{ position: "sticky", top: 0, zIndex: 40, backdropFilter: "blur(16px)", background: "rgba(2,6,23,0.88)", borderBottom: "1px solid #1e293b" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "8px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, background: "linear-gradient(135deg,#a855f7,#ec4899)" }}>✨</div>
-          <h1 style={{ fontSize: 15, fontWeight: 800, color: "#fff", margin: 0 }}>VAE Lab</h1>
-          <span style={{ fontSize: 10, color: "#475569" }}>Variational Autoencoder Simulator</span>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-            {["overview", "latent", "interpolate"].map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, background: tab === t ? "#a855f7" : "transparent", color: tab === t ? "#fff" : "#64748b", border: "none", cursor: "pointer" }}>
-                {t === "overview" ? "🏗 Overview" : t === "latent" ? "🗺 Latent Space" : "🔀 Interpolation"}
-              </button>
-            ))}
-          </div>
+      {/* Lab title + tabs */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "8px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, background: "linear-gradient(135deg,#a855f7,#ec4899)" }}>✨</div>
+        <h1 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>VAE Lab</h1>
+        <span style={{ fontSize: 10 }}>Variational Autoencoder Simulator</span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+          {["overview", "latent", "interpolate"].map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, background: tab === t ? "#a855f7" : "transparent", color: tab === t ? "#fff" : "#64748b", border: "none", cursor: "pointer" }}>
+              {t === "overview" ? "🏗 Overview" : t === "latent" ? "🗺 Latent Space" : "🔀 Interpolation"}
+            </button>
+          ))}
         </div>
       </div>
 
