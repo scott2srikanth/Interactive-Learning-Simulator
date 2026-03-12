@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useUserStore } from '../store/userStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Navbar, NavLink } from '../components/ui/Navbar';
 import { CheckCircle, Circle, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TOPICS } from '../types/topics';
@@ -12,16 +13,16 @@ import { TOPICS } from '../types/topics';
    ═══════════════════════════════════════════════════════════ */
 // Math formula block
 const MathBlock: React.FC<{formula: string; label?: string}> = ({formula, label}) => (
-  <div className="my-4 p-4 bg-slate-900 rounded-lg border border-slate-700 text-center">
-    {label && <p className="text-xs text-slate-400 mb-2">{label}</p>}
-    <p className="text-lg font-bold text-cyan-300 font-mono">{formula}</p>
+  <div className="my-4 p-4 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+    {label && <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{label}</p>}
+    <p className="text-lg font-bold text-blue-700 dark:text-cyan-300 font-mono">{formula}</p>
   </div>
 );
 
 // Colored info box
 const InfoBox: React.FC<{color: string; title: string; children: React.ReactNode}> = ({color, title, children}) => {
-  const colors: Record<string, string> = { blue: 'bg-blue-50 border-blue-300', green: 'bg-green-50 border-green-300', yellow: 'bg-yellow-50 border-yellow-300', red: 'bg-red-50 border-red-300', purple: 'bg-purple-50 border-purple-300', orange: 'bg-orange-50 border-orange-300' };
-  return <div className={`my-4 p-4 rounded-lg border-l-4 ${colors[color] || colors.blue}`}><h4 className="font-bold text-gray-900 mb-2">{title}</h4><div className="text-sm text-gray-700">{children}</div></div>;
+  const colors: Record<string, string> = { blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700', green: 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700', yellow: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700', red: 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700', purple: 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700', orange: 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700' };
+  return <div className={`my-4 p-4 rounded-lg border-l-4 ${colors[color] || colors.blue}`}><h4 className="font-bold text-gray-900 dark:text-white mb-2">{title}</h4><div className="text-sm text-gray-700 dark:text-gray-300">{children}</div></div>;
 };
 
 // Flow diagram
@@ -170,7 +171,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
   cnn: [
     { id:'cnn-1', title:'Images as Data', description:'How computers see images as matrices of numbers', icon:'🖼️', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Images are grids of numbers called <b>pixels</b>. Grayscale images have one number per pixel (0=black, 1=white). Color images have <b>3 channels: Red, Green, Blue</b>.</p>
+        <p className="text-gray-700 dark:text-gray-300">Images are grids of numbers called <b>pixels</b>. Grayscale images have one number per pixel (0=black, 1=white). Color images have <b>3 channels: Red, Green, Blue</b>.</p>
         <div className="flex gap-6 flex-wrap justify-center my-4">
           <GridVisual data={[[0,0,0,0,0],[0,0,1,0,0],[0,1,1,1,0],[0,0,1,0,0],[0,0,0,0,0]]} cellSize={32} label="Grayscale (1 channel)" colorFn={v=>v>0.5?'#fff':'#1e293b'} />
           <div className="text-center">
@@ -194,7 +195,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'cnn-2', title:'Convolution Operation', description:'How sliding filters detect patterns', icon:'🔍', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Convolution slides a small matrix (<b>kernel/filter</b>) across the image. At each position, it multiplies overlapping values and sums them into a single output value.</p>
+        <p className="text-gray-700 dark:text-gray-300">Convolution slides a small matrix (<b>kernel/filter</b>) across the image. At each position, it multiplies overlapping values and sums them into a single output value.</p>
         <ConvDemo />
         <MathBlock formula="Output[i,j] = Σₐ Σᵦ Input[i+a, j+b] × Kernel[a, b]" label="Convolution formula" />
         <InfoBox color="yellow" title="📐 Key Parameters">
@@ -204,7 +205,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'cnn-3', title:'Filters and Feature Maps', description:'How kernels detect edges and textures', icon:'🎨', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Different kernels detect different features. Each filter produces one <b>feature map</b> (output channel).</p>
+        <p className="text-gray-700 dark:text-gray-300">Different kernels detect different features. Each filter produces one <b>feature map</b> (output channel).</p>
         <div className="flex gap-4 flex-wrap justify-center">
           <div className="text-center">
             <GridVisual data={[[-1,0,1],[-2,0,2],[-1,0,1]]} cellSize={36} label="Vertical Edge" colorFn={v=>v>0?`rgba(34,197,94,${v/2+0.2})`:`rgba(239,68,68,${Math.abs(v)/2+0.2})`} />
@@ -224,7 +225,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'cnn-4', title:'Activation Functions', description:'Adding non-linearity with ReLU, Sigmoid, Tanh', icon:'⚡', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Without activations, stacking layers is just matrix multiplication — equivalent to a single layer. <b>Activations add non-linearity</b>.</p>
+        <p className="text-gray-700 dark:text-gray-300">Without activations, stacking layers is just matrix multiplication — equivalent to a single layer. <b>Activations add non-linearity</b>.</p>
         <div className="flex gap-4 flex-wrap justify-center">
           <ActivationPlot fn="relu" /><ActivationPlot fn="sigmoid" /><ActivationPlot fn="tanh" />
         </div>
@@ -234,7 +235,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'cnn-5', title:'Pooling Layers', description:'Reducing dimensions while keeping features', icon:'⬇️', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Pooling <b>reduces spatial size</b> of feature maps, keeping the most important information.</p>
+        <p className="text-gray-700 dark:text-gray-300">Pooling <b>reduces spatial size</b> of feature maps, keeping the most important information.</p>
         <PoolDemo />
         <InfoBox color="orange" title="Max vs Average Pooling">
           <p><b>Max Pool:</b> Takes the maximum value — preserves strongest detections.<br/><b>Average Pool:</b> Takes the mean — smoother, preserves general presence.</p>
@@ -244,7 +245,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'cnn-6', title:'CNN Architecture', description:'Full pipeline: Conv→Pool→Dense→Softmax', icon:'🏗️', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">A complete CNN stacks multiple conv+pool blocks, then flattens and classifies.</p>
+        <p className="text-gray-700 dark:text-gray-300">A complete CNN stacks multiple conv+pool blocks, then flattens and classifies.</p>
         <FlowDiagram steps={[{label:'Input',color:'bg-green-500'},{label:'Conv+ReLU',color:'bg-blue-500'},{label:'MaxPool',color:'bg-orange-500'},{label:'Conv+ReLU',color:'bg-blue-500'},{label:'MaxPool',color:'bg-orange-500'},{label:'Flatten',color:'bg-purple-500'},{label:'Dense',color:'bg-pink-500'},{label:'Softmax',color:'bg-red-500'}]} />
         <InfoBox color="purple" title="🏛️ Famous Architectures">
           <p><b>LeNet-5</b> (1998): Handwriting recognition · <b>AlexNet</b> (2012): Won ImageNet · <b>VGG</b> (2014): Very deep (16-19 layers) · <b>ResNet</b> (2015): Skip connections, 152 layers · <b>EfficientNet</b> (2019): Optimal scaling</p>
@@ -255,7 +256,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
   ann: [
     { id:'ann-1', title:'What is a Neural Network?', description:'Neurons, weights, and layers', icon:'🧠', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">A neural network is inspired by the brain. <b>Artificial neurons</b> receive inputs, multiply by weights, sum them, add bias, and apply an activation.</p>
+        <p className="text-gray-700 dark:text-gray-300">A neural network is inspired by the brain. <b>Artificial neurons</b> receive inputs, multiply by weights, sum them, add bias, and apply an activation.</p>
         <NeuronDiagram inputs={['x₁ × w₁','x₂ × w₂','x₃ × w₃']} output="ŷ" activation="σ" />
         <MathBlock formula="output = σ(w₁x₁ + w₂x₂ + w₃x₃ + bias)" label="Single neuron computation" />
         <FlowDiagram steps={[{label:'Input Layer',color:'bg-green-500'},{label:'Hidden Layer 1',color:'bg-blue-500'},{label:'Hidden Layer 2',color:'bg-blue-500'},{label:'Output Layer',color:'bg-purple-500'}]} />
@@ -263,7 +264,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'ann-2', title:'Forward Propagation', description:'Data flowing through the network', icon:'➡️', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Data enters the input layer and flows forward. Each neuron computes a <b>weighted sum + activation</b>.</p>
+        <p className="text-gray-700 dark:text-gray-300">Data enters the input layer and flows forward. Each neuron computes a <b>weighted sum + activation</b>.</p>
         <MathBlock formula="z = Σᵢ(wᵢ × xᵢ) + b  →  a = activation(z)" label="Per-neuron computation" />
         <FlowDiagram steps={[{label:'x = [0.5, 0.3]',color:'bg-green-500'},{label:'z = Wx + b',color:'bg-yellow-500'},{label:'a = ReLU(z)',color:'bg-blue-500'},{label:'z₂ = W₂a + b₂',color:'bg-yellow-500'},{label:'ŷ = σ(z₂)',color:'bg-purple-500'}]} />
         <InfoBox color="blue" title="📐 Shape Tracking"><p>Input: [2] → Hidden: [4] → Output: [1]. Weights matrix between layers: [4×2] then [1×4].</p></InfoBox>
@@ -271,7 +272,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'ann-3', title:'Activation Functions', description:'Why non-linearity matters', icon:'⚡', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Without activations, a deep network is just one linear transformation. <b>Non-linearity</b> gives networks their power.</p>
+        <p className="text-gray-700 dark:text-gray-300">Without activations, a deep network is just one linear transformation. <b>Non-linearity</b> gives networks their power.</p>
         <div className="flex gap-4 flex-wrap justify-center">
           <ActivationPlot fn="relu" /><ActivationPlot fn="sigmoid" /><ActivationPlot fn="tanh" />
         </div>
@@ -282,7 +283,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'ann-4', title:'Loss Functions & Training', description:'Measuring and reducing errors', icon:'📉', content: (
       <div className="space-y-4">
-        <p className="text-gray-700"><b>Loss</b> measures how wrong the predictions are. Training <b>minimizes</b> the loss.</p>
+        <p className="text-gray-700 dark:text-gray-300"><b>Loss</b> measures how wrong the predictions are. Training <b>minimizes</b> the loss.</p>
         <MathBlock formula="MSE = (1/n) Σ(yᵢ - ŷᵢ)²" label="Mean Squared Error (regression)" />
         <MathBlock formula="CE = -Σ yᵢ log(ŷᵢ)" label="Cross-Entropy (classification)" />
         <InfoBox color="yellow" title="⚙️ Learning Rate">
@@ -292,7 +293,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'ann-5', title:'Backpropagation', description:'Gradients flowing backward', icon:'🔄', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Backprop computes the <b>gradient of loss with respect to each weight</b> using the chain rule.</p>
+        <p className="text-gray-700 dark:text-gray-300">Backprop computes the <b>gradient of loss with respect to each weight</b> using the chain rule.</p>
         <MathBlock formula="∂L/∂w = ∂L/∂a × ∂a/∂z × ∂z/∂w" label="Chain rule of calculus" />
         <FlowDiagram steps={[{label:'Loss',color:'bg-red-500'},{label:'∂L/∂a₂',color:'bg-orange-500'},{label:'∂a₂/∂z₂',color:'bg-yellow-500'},{label:'∂z₂/∂w₂',color:'bg-green-500'},{label:'Update w₂',color:'bg-blue-500'}]} />
         <MathBlock formula="w_new = w_old − learning_rate × gradient" label="Weight update rule (gradient descent)" />
@@ -300,7 +301,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'ann-6', title:'Decision Boundaries', description:'Separating classes in feature space', icon:'🎯', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">A single neuron draws a <b>linear boundary</b>. Hidden layers create <b>non-linear boundaries</b>.</p>
+        <p className="text-gray-700 dark:text-gray-300">A single neuron draws a <b>linear boundary</b>. Hidden layers create <b>non-linear boundaries</b>.</p>
         <div className="flex gap-6 flex-wrap justify-center my-4">
           <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200"><p className="font-bold text-sm mb-2">0 hidden layers</p><p className="text-xs text-gray-600">Linear boundary only</p><p className="text-xs text-red-500">❌ Cannot solve XOR</p></div>
           <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200"><p className="font-bold text-sm mb-2">1 hidden layer (4n)</p><p className="text-xs text-gray-600">Non-linear boundary</p><p className="text-xs text-green-600">✓ Solves XOR, circles</p></div>
@@ -313,14 +314,14 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
   rnn: [
     { id:'rnn-1', title:'Sequential Data', description:'Why order matters', icon:'📊', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Some data has a natural <b>order</b>: words in a sentence, stock prices over time. Standard neural networks ignore this order.</p>
+        <p className="text-gray-700 dark:text-gray-300">Some data has a natural <b>order</b>: words in a sentence, stock prices over time. Standard neural networks ignore this order.</p>
         <FlowDiagram steps={[{label:'x₁',color:'bg-blue-500'},{label:'x₂',color:'bg-blue-500'},{label:'x₃',color:'bg-blue-500'},{label:'...',color:'bg-gray-400'},{label:'xₜ',color:'bg-blue-500'}]} />
         <InfoBox color="orange" title="📊 Examples"><p>Language: "The cat sat on the ___" · Time series: predict tomorrow's stock price · Music: generate the next note · Speech: convert audio to text</p></InfoBox>
       </div>
     )},
     { id:'rnn-2', title:'RNN Cell', description:'The recurrent hidden state', icon:'🔄', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">At each timestep, the RNN takes input xₜ and previous hidden state h<sub>t-1</sub>, producing new hidden state hₜ.</p>
+        <p className="text-gray-700 dark:text-gray-300">At each timestep, the RNN takes input xₜ and previous hidden state h<sub>t-1</sub>, producing new hidden state hₜ.</p>
         <MathBlock formula="hₜ = tanh(W_xh · xₜ + W_hh · hₜ₋₁ + b)" label="RNN hidden state update" />
         <FlowDiagram steps={[{label:'xₜ',color:'bg-green-500'},{label:'+ hₜ₋₁',color:'bg-purple-500'},{label:'→ tanh →',color:'bg-yellow-500'},{label:'hₜ',color:'bg-purple-500'},{label:'→ yₜ',color:'bg-blue-500'}]} />
         <InfoBox color="purple" title="🧠 The Hidden State is Memory"><p>hₜ encodes <b>everything seen so far</b>. The same weights W are shared across all timesteps.</p></InfoBox>
@@ -328,7 +329,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'rnn-3', title:'Vanishing Gradients', description:'Why simple RNNs struggle', icon:'📉', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">During backprop through time, gradients are <b>multiplied at each step</b>. If &lt; 1, they shrink to zero.</p>
+        <p className="text-gray-700 dark:text-gray-300">During backprop through time, gradients are <b>multiplied at each step</b>. If &lt; 1, they shrink to zero.</p>
         <div className="my-4 flex items-center gap-2 justify-center">
           {[1,2,3,4,5].map(i => <div key={i} className="text-center"><div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold" style={{background:`rgba(239,68,68,${1-i*0.18})`,color:'#fff'}}>t={i}</div><p className="text-xs mt-1" style={{color:`rgba(239,68,68,${1-i*0.18})`}}>{(0.7**i).toFixed(2)}</p></div>)}
           <span className="text-gray-400 text-sm">→ 0.00</span>
@@ -339,7 +340,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'rnn-4', title:'LSTM Architecture', description:'Gates that control information', icon:'🧬', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">LSTM has a <b>cell state</b> (long-term memory) and <b>3 gates</b> controlling information flow.</p>
+        <p className="text-gray-700 dark:text-gray-300">LSTM has a <b>cell state</b> (long-term memory) and <b>3 gates</b> controlling information flow.</p>
         <div className="flex gap-3 flex-wrap justify-center my-4">
           <div className="p-3 rounded-lg bg-red-50 border border-red-300 text-center w-40"><p className="font-bold text-red-700">🚪 Forget Gate</p><p className="text-xs text-gray-600 mt-1">f = σ(W·[h,x]+b)</p><p className="text-xs text-red-600">What to REMOVE</p></div>
           <div className="p-3 rounded-lg bg-green-50 border border-green-300 text-center w-40"><p className="font-bold text-green-700">🚪 Input Gate</p><p className="text-xs text-gray-600 mt-1">i = σ(W·[h,x]+b)</p><p className="text-xs text-green-600">What to ADD</p></div>
@@ -350,7 +351,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'rnn-5', title:'LSTM Cell State', description:'The conveyor belt of memory', icon:'🔗', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">The cell state runs through the entire sequence like a <b>conveyor belt</b>. Information can flow unchanged.</p>
+        <p className="text-gray-700 dark:text-gray-300">The cell state runs through the entire sequence like a <b>conveyor belt</b>. Information can flow unchanged.</p>
         <FlowDiagram steps={[{label:'c₀',color:'bg-yellow-500'},{label:'× forget',color:'bg-red-400'},{label:'+ input',color:'bg-green-400'},{label:'c₁',color:'bg-yellow-500'},{label:'× forget',color:'bg-red-400'},{label:'+ input',color:'bg-green-400'},{label:'c₂',color:'bg-yellow-500'}]} />
         <InfoBox color="yellow" title="✅ Why This Works"><p>The update is <b>additive</b> (c + ...) not multiplicative (c × ...). Gradients flow through the cell state without vanishing!</p></InfoBox>
         <MathBlock formula="hₜ = oₜ ⊙ tanh(cₜ)" label="Hidden state from cell state via output gate" />
@@ -369,7 +370,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
   vae: [
     { id:'vae-1', title:'Autoencoders', description:'Compress and reconstruct', icon:'🔄', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">An autoencoder learns to <b>compress</b> (encode) data into a compact representation, then <b>reconstruct</b> (decode) it.</p>
+        <p className="text-gray-700 dark:text-gray-300">An autoencoder learns to <b>compress</b> (encode) data into a compact representation, then <b>reconstruct</b> (decode) it.</p>
         <FlowDiagram steps={[{label:'Input (784)',color:'bg-green-500'},{label:'Encoder',color:'bg-blue-500'},{label:'Latent (2)',color:'bg-yellow-500'},{label:'Decoder',color:'bg-pink-500'},{label:'Output (784)',color:'bg-green-500'}]} />
         <MathBlock formula="784 → 128 → 32 → 2 → 32 → 128 → 784" label="Bottleneck architecture" />
         <InfoBox color="blue" title="🔑 The Bottleneck"><p>The small latent code forces the network to learn the <b>most essential features</b>. This is unsupervised learning — no labels needed!</p></InfoBox>
@@ -377,7 +378,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'vae-2', title:'The Latent Space', description:'Where similar data clusters', icon:'🗺️', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">The latent space is the compressed representation. <b>Similar inputs map to nearby points.</b></p>
+        <p className="text-gray-700 dark:text-gray-300">The latent space is the compressed representation. <b>Similar inputs map to nearby points.</b></p>
         <div className="my-4 bg-slate-100 rounded-lg p-4 text-center">
           <div className="inline-block relative" style={{width:200,height:200,background:'#0f172a',borderRadius:12}}>
             {[{x:30,y:40,c:'#ef4444',l:'3'},{x:50,y:50,c:'#ef4444',l:'3'},{x:40,y:35,c:'#ef4444',l:'3'},{x:150,y:130,c:'#3b82f6',l:'7'},{x:160,y:140,c:'#3b82f6',l:'7'},{x:140,y:145,c:'#3b82f6',l:'7'},{x:100,y:90,c:'#22c55e',l:'5'},{x:90,y:100,c:'#22c55e',l:'5'}].map((p,i) => (
@@ -391,7 +392,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'vae-3', title:'Why Variational?', description:'Distributions, not just points', icon:'🎲', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Regular autoencoders map to <b>single points</b> → gaps in latent space. VAEs map to <b>distributions</b>.</p>
+        <p className="text-gray-700 dark:text-gray-300">Regular autoencoders map to <b>single points</b> → gaps in latent space. VAEs map to <b>distributions</b>.</p>
         <div className="flex gap-6 flex-wrap justify-center my-4">
           <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200 w-48"><p className="font-bold text-red-700 mb-2">Regular AE ❌</p><p className="text-xs text-gray-600">Scattered points with gaps. Decoding a gap point → garbage output.</p></div>
           <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200 w-48"><p className="font-bold text-green-700 mb-2">VAE ✅</p><p className="text-xs text-gray-600">Overlapping distributions. Any point can be decoded → smooth generation.</p></div>
@@ -401,7 +402,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'vae-4', title:'Reparameterization Trick', description:'z = μ + σ × ε', icon:'🎯', content: (
       <div className="space-y-4">
-        <p className="text-gray-700"><b>Problem:</b> Can't backpropagate through random sampling. <b>Solution:</b> Reparameterize!</p>
+        <p className="text-gray-700 dark:text-gray-300"><b>Problem:</b> Can't backpropagate through random sampling. <b>Solution:</b> Reparameterize!</p>
         <MathBlock formula="z = μ + σ × ε,  where ε ~ N(0, 1)" label="The reparameterization trick" />
         <FlowDiagram steps={[{label:'μ (learnable)',color:'bg-purple-500'},{label:'+ σ × ε',color:'bg-yellow-500'},{label:'= z',color:'bg-green-500'}]} />
         <InfoBox color="yellow" title="🧠 Why It Works"><p>The randomness (ε) is <b>external</b> — not part of the computation graph. Gradients flow through μ and σ, making the whole thing trainable!</p></InfoBox>
@@ -419,9 +420,9 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'vae-6', title:'Generation & Interpolation', description:'Creating new data', icon:'✨', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Once trained, sample z ~ N(0,1) → decode → <b>new image!</b></p>
+        <p className="text-gray-700 dark:text-gray-300">Once trained, sample z ~ N(0,1) → decode → <b>new image!</b></p>
         <FlowDiagram steps={[{label:'z ~ N(0,1)',color:'bg-yellow-500'},{label:'Decoder',color:'bg-pink-500'},{label:'New Image!',color:'bg-green-500'}]} />
-        <p className="text-gray-700">Interpolate between two inputs by mixing their latent codes:</p>
+        <p className="text-gray-700 dark:text-gray-300">Interpolate between two inputs by mixing their latent codes:</p>
         <FlowDiagram steps={[{label:'z_A',color:'bg-blue-500'},{label:'α·z_A + (1-α)·z_B',color:'bg-yellow-500'},{label:'z_B',color:'bg-purple-500'}]} />
         <InfoBox color="green" title="🌍 Applications"><p>Face generation · Drug molecule design · Music composition · Data augmentation · Anomaly detection (high reconstruction error = anomaly)</p></InfoBox>
       </div>
@@ -430,7 +431,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
   transformers: [
     { id:'tf-1', title:'Beyond Sequences', description:'Why attention replaced RNNs', icon:'⚡', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">RNNs process one token at a time → bottleneck. Transformers process <b>ALL tokens simultaneously</b>.</p>
+        <p className="text-gray-700 dark:text-gray-300">RNNs process one token at a time → bottleneck. Transformers process <b>ALL tokens simultaneously</b>.</p>
         <div className="flex gap-6 flex-wrap justify-center my-4">
           <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200 w-48"><p className="font-bold text-red-700 mb-2">RNN ❌</p><p className="text-xs text-gray-600">Sequential (slow). Long-range dependencies are hard. Cannot parallelize.</p></div>
           <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200 w-48"><p className="font-bold text-green-700 mb-2">Transformer ✅</p><p className="text-xs text-gray-600">Parallel (fast). Every token sees every other token directly. GPU-friendly.</p></div>
@@ -440,7 +441,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'tf-2', title:'Token Embeddings', description:'Words → Vectors', icon:'📝', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Words are converted to dense vectors called <b>embeddings</b>. Similar words have similar vectors.</p>
+        <p className="text-gray-700 dark:text-gray-300">Words are converted to dense vectors called <b>embeddings</b>. Similar words have similar vectors.</p>
         <FlowDiagram steps={[{label:'"the"',color:'bg-green-500'},{label:'→ lookup →',color:'bg-gray-400'},{label:'[0.2, -0.5, 0.8, ...]',color:'bg-blue-500'}]} />
         <MathBlock formula="Embedding Matrix: [vocab_size × d_model]" label="Each row is one token's learned vector" />
         <InfoBox color="green" title="📐 Dimensions"><p>GPT-2: d_model=768 · GPT-3: d_model=12,288 · Our simulator: d_model=4–16 for clarity.</p></InfoBox>
@@ -448,7 +449,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'tf-3', title:'Positional Encoding', description:'Giving the model word order', icon:'🌊', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Transformers have no inherent order. <b>Positional encoding</b> adds position information via sine/cosine waves.</p>
+        <p className="text-gray-700 dark:text-gray-300">Transformers have no inherent order. <b>Positional encoding</b> adds position information via sine/cosine waves.</p>
         <MathBlock formula="PE(pos, 2i) = sin(pos / 10000^(2i/d))" label="Even dimensions use sine" />
         <MathBlock formula="PE(pos, 2i+1) = cos(pos / 10000^(2i/d))" label="Odd dimensions use cosine" />
         <InfoBox color="blue" title="🌊 Why Sine/Cosine?"><p>Each position gets a <b>unique signature</b>. Nearby positions have similar encodings. The model can learn relative positions from these wave patterns.</p></InfoBox>
@@ -456,7 +457,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'tf-4', title:'Self-Attention (Q, K, V)', description:'The core of Transformers', icon:'🔑', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">Each token is projected into <b>Query</b>, <b>Key</b>, and <b>Value</b> vectors.</p>
+        <p className="text-gray-700 dark:text-gray-300">Each token is projected into <b>Query</b>, <b>Key</b>, and <b>Value</b> vectors.</p>
         <div className="flex gap-3 flex-wrap justify-center my-4">
           <div className="p-3 rounded-lg bg-red-50 border border-red-300 text-center w-44"><p className="font-bold text-red-700">🔴 Query (Q)</p><p className="text-xs text-gray-600">"What am I looking for?"</p></div>
           <div className="p-3 rounded-lg bg-green-50 border border-green-300 text-center w-44"><p className="font-bold text-green-700">🟢 Key (K)</p><p className="text-xs text-gray-600">"What do I contain?"</p></div>
@@ -469,7 +470,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
     { id:'tf-5', title:'Multi-Head Attention', description:'Multiple attention patterns', icon:'👁️', content: (
       <div className="space-y-4">
-        <p className="text-gray-700">One head learns one type of relationship. <b>Multiple heads</b> learn different relationships in parallel.</p>
+        <p className="text-gray-700 dark:text-gray-300">One head learns one type of relationship. <b>Multiple heads</b> learn different relationships in parallel.</p>
         <div className="flex gap-3 flex-wrap justify-center my-4">
           {['Syntax','Semantics','Proximity','Coreference'].map((h,i) => (
             <div key={i} className="p-2 rounded-lg bg-yellow-50 border border-yellow-300 text-center w-28"><p className="font-bold text-yellow-700 text-xs">Head {i+1}</p><p className="text-xs text-gray-600">{h}</p></div>
@@ -517,22 +518,13 @@ export const Lessons: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${gradient}`}>
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/topics')}><ArrowLeft className="w-4 h-4 mr-2" />Topics</Button>
-              <h1 className="text-2xl font-bold text-gray-900">{currentTopic?.name} Lessons</h1>
-            </div>
-            <div className="flex space-x-2">
-              <Link to="/dashboard"><Button variant="ghost">Dashboard</Button></Link>
-              <Link to={`/topics/${topicId}/lab`}><Button variant="primary">Go to Lab</Button></Link>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900`}>
+      <Navbar actions={<><NavLink to="/topics">Topics</NavLink><NavLink to="/dashboard">Dashboard</NavLink><NavLink to={`/topics/${topicId}/lab`} primary>Go to Lab</NavLink></>} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6 flex items-center gap-3">
+          <Button variant="ghost" onClick={() => navigate('/topics')}><ArrowLeft className="w-4 h-4 mr-1" />Back</Button>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{currentTopic?.name} Lessons</h1>
+        </div>
         {!selectedLesson ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {lessons.map((lesson, idx) => {
@@ -546,7 +538,7 @@ export const Lessons: React.FC = () => {
                         {isCompleted ? <CheckCircle className="w-6 h-6 text-green-600" /> : <Circle className="w-6 h-6 text-gray-300" />}
                       </div>
                       <h3 className="text-xl font-semibold text-gray-900 mb-2">{lesson.title}</h3>
-                      <p className="text-gray-600 text-sm mb-4">{lesson.description}</p>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{lesson.description}</p>
                       <Button variant="outline" size="sm" className="w-full">{isCompleted ? 'Review Lesson' : 'Start Lesson'}</Button>
                     </div>
                   </Card>
@@ -560,10 +552,10 @@ export const Lessons: React.FC = () => {
               <div className="mb-6"><Button variant="ghost" onClick={() => setSelectedLesson(null)}>← Back to Lessons</Button></div>
               <div className="flex items-center space-x-4 mb-6">
                 <div className="text-4xl">{selectedLesson.icon}</div>
-                <div><h2 className="text-3xl font-bold text-gray-900">{selectedLesson.title}</h2><p className="text-gray-600">{selectedLesson.description}</p></div>
+                <div><h2 className="text-3xl font-bold text-gray-900 dark:text-white">{selectedLesson.title}</h2><p className="text-gray-600 dark:text-gray-400">{selectedLesson.description}</p></div>
               </div>
               <div className="prose max-w-none">{selectedLesson.content}</div>
-              <div className="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between">
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 flex items-center justify-between">
                 <Link to={`/topics/${topicId}/lab/${selectedLesson.id}`}><Button variant="outline">🧪 Try in Lab →</Button></Link>
                 {!completedLessons.includes(selectedLesson.id) ? (
                   <Button onClick={() => completeLesson(selectedLesson.id)}>Mark as Complete (+50 XP)</Button>

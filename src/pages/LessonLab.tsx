@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { Navbar, NavLink } from '../components/ui/Navbar';
 import { ArrowLeft } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════
@@ -715,27 +716,15 @@ export const LessonLab: React.FC = () => {
   const LabComponent = lab.component;
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(145deg, #020617, #0c1222, #020617)' }}>
-      <div className="sticky top-0 z-40 backdrop-blur-xl" style={{ background: 'rgba(2,6,23,0.88)', borderBottom: '1px solid #1e293b' }}>
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate(`/topics/${topicId}/lessons`)}>
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Lessons
-            </Button>
-            <div>
-              <h1 className="text-lg font-bold text-white">🧪 {lab.title}</h1>
-              <p className="text-xs text-gray-500">Lesson Lab · {lessonId}</p>
-            </div>
-          </div>
-          <Link to={`/topics/${topicId}/lab`}>
-            <Button variant="secondary" size="sm">Full {topicId?.toUpperCase()} Lab →</Button>
-          </Link>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <Navbar actions={<><NavLink to={`/topics/${topicId}/lessons`}>← Lessons</NavLink><NavLink to={`/topics/${topicId}/lab`} primary>Full Lab</NavLink></>} />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="rounded-2xl p-6" style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid #1e293b' }}>
+        <div className="mb-4">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">🧪 {lab.title}</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Lesson Lab · {lessonId}</p>
+        </div>
+        <div className="rounded-2xl p-6 bg-white dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 shadow-lg">
           <LabComponent />
         </div>
         <div className="mt-6 flex justify-between">
