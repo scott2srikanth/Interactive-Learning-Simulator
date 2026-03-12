@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Leaderboard } from './pages/Leaderboard';
 import { Lab } from './pages/Lab';
 import { Lessons } from './pages/Lessons';
+import { LessonLab } from './pages/LessonLab';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/topics" element={<Topics />} />
         <Route path="/topics/:topicId/lab" element={<Lab />} />
+        <Route path="/topics/:topicId/lab/:lessonId" element={<LessonLab />} />
         <Route path="/topics/:topicId/lessons" element={<Lessons />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/leaderboard" element={<Leaderboard />} />

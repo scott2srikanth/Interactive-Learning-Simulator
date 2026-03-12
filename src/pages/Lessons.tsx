@@ -564,7 +564,7 @@ export const Lessons: React.FC = () => {
               </div>
               <div className="prose max-w-none">{selectedLesson.content}</div>
               <div className="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between">
-                <Link to={`/topics/${topicId}/lab`}><Button variant="outline">Try in Lab →</Button></Link>
+                <Link to={`/topics/${topicId}/lab/${selectedLesson.id}`}><Button variant="outline">🧪 Try in Lab →</Button></Link>
                 {!completedLessons.includes(selectedLesson.id) ? (
                   <Button onClick={() => completeLesson(selectedLesson.id)}>Mark as Complete (+50 XP)</Button>
                 ) : (
