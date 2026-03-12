@@ -100,11 +100,11 @@ function ConvolutionLab() {
         {Object.entries(PRESET_KERNELS).map(([name, k]) => (
           <button key={name} onClick={() => { setKernel(k); setPos({ r: 0, c: 0 }); }} className="px-3 py-1 rounded text-xs font-semibold bg-blue-900 text-blue-300 border border-blue-700 hover:bg-blue-800">{name}</button>
         ))}
-        <select value={stride} onChange={e => { setStride(+e.target.value); setPos({ r: 0, c: 0 }); }} className="px-2 py-1 rounded text-xs bg-gray-800 text-white border border-gray-600">
+        <select value={stride} onChange={e => { setStride(+e.target.value); setPos({ r: 0, c: 0 }); }} className="px-2 py-1 rounded text-xs bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600">
           <option value={1}>Stride 1</option><option value={2}>Stride 2</option>
         </select>
         <button onClick={() => { setPos({ r: 0, c: 0 }); setPlaying(!playing); }} className={`px-3 py-1 rounded text-xs font-bold text-white ${playing ? 'bg-red-600' : 'bg-green-600'}`}>{playing ? '⏸ Pause' : '▶ Animate'}</button>
-        <button onClick={() => setPos({ r: 0, c: 0 })} className="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">↺</button>
+        <button onClick={() => setPos({ r: 0, c: 0 })} className="px-2 py-1 rounded text-xs bg-gray-700 text-gray-700 dark:text-gray-300">↺</button>
       </div>
       <div className="flex gap-6 items-start flex-wrap">
         <SmallGrid data={input} cellSize={36} label="Input 6×6" highlight={{ r: iR, c: iC, h: k, w: k }} colorFn={(v: number) => v > 0.5 ? '#3b82f6' : '#1e293b'} />
@@ -113,9 +113,9 @@ function ConvolutionLab() {
         </div>
         <SmallGrid data={output} cellSize={36} label={`Output ${oH}×${oW}`} colorFn={(v: number) => { const n = (v + 10) / 20; return `rgb(${Math.round(n * 200 + 30)},${Math.round(n * 150 + 30)},${Math.round((1 - n) * 200 + 30)})`; }} />
       </div>
-      <div className="p-3 bg-gray-900 rounded-lg text-xs font-mono">
+      <div className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg text-xs font-mono">
         <p className="text-green-400 mb-1">Position ({pos.r},{pos.c}):</p>
-        <div className="flex gap-1 flex-wrap">{prods.map((p, i) => <span key={i} className="text-gray-300"><span className="text-blue-400">{p.iv.toFixed(1)}</span>×<span className="text-yellow-400">{p.kv.toFixed(1)}</span>=<b className={p.p >= 0 ? 'text-green-400' : 'text-red-400'}>{p.p.toFixed(1)}</b>{i < prods.length - 1 ? ' + ' : ''}</span>)}</div>
+        <div className="flex gap-1 flex-wrap">{prods.map((p, i) => <span key={i} className="text-gray-700 dark:text-gray-300"><span className="text-blue-400">{p.iv.toFixed(1)}</span>×<span className="text-yellow-400">{p.kv.toFixed(1)}</span>=<b className={p.p >= 0 ? 'text-green-400' : 'text-red-400'}>{p.p.toFixed(1)}</b>{i < prods.length - 1 ? ' + ' : ''}</span>)}</div>
         <p className="text-yellow-300 mt-1 font-bold">Σ = {sum.toFixed(2)}</p>
       </div>
     </div>
@@ -142,15 +142,15 @@ function PoolingLab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        <button onClick={() => setPoolType('max')} className={`px-3 py-1 rounded text-xs font-bold ${poolType === 'max' ? 'bg-orange-600 text-white' : 'bg-gray-800 text-gray-400'}`}>Max Pool</button>
-        <button onClick={() => setPoolType('avg')} className={`px-3 py-1 rounded text-xs font-bold ${poolType === 'avg' ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400'}`}>Avg Pool</button>
+        <button onClick={() => setPoolType('max')} className={`px-3 py-1 rounded text-xs font-bold ${poolType === 'max' ? 'bg-orange-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>Max Pool</button>
+        <button onClick={() => setPoolType('avg')} className={`px-3 py-1 rounded text-xs font-bold ${poolType === 'avg' ? 'bg-cyan-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>Avg Pool</button>
         <button onClick={() => { setPos({ r: 0, c: 0 }); setPlaying(!playing); }} className={`px-3 py-1 rounded text-xs font-bold text-white ${playing ? 'bg-red-600' : 'bg-green-600'}`}>{playing ? '⏸' : '▶ Animate'}</button>
       </div>
       <div className="flex gap-6 items-start flex-wrap">
         <SmallGrid data={input} cellSize={36} label="Input 6×6" highlight={{ r: iR, c: iC, h: poolSize, w: poolSize }} colorFn={(v: number) => `rgba(59,130,246,${v / 10 + 0.1})`} />
         <SmallGrid data={output} cellSize={44} label={`${poolType === 'max' ? 'Max' : 'Avg'} Pool ${oH}×${oW}`} colorFn={(v: number) => `rgba(34,197,94,${v / 10 + 0.15})`} />
       </div>
-      <div className="p-3 bg-gray-900 rounded-lg text-xs font-mono">
+      <div className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg text-xs font-mono">
         <span className="text-orange-400">{poolType}([{windowVals.join(', ')}]) = </span>
         <b className="text-green-400 text-sm">{result.toFixed(2)}</b>
       </div>
@@ -164,12 +164,12 @@ function ActivationLab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        {['relu', 'sigmoid', 'tanh'].map(f => <button key={f} onClick={() => setFn(f)} className={`px-3 py-1 rounded text-xs font-bold ${fn === f ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>{f}</button>)}
+        {['relu', 'sigmoid', 'tanh'].map(f => <button key={f} onClick={() => setFn(f)} className={`px-3 py-1 rounded text-xs font-bold ${fn === f ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{f}</button>)}
       </div>
       <ActivationCanvas fn={fn} w={300} h={140} />
       <div className="grid grid-cols-4 gap-2">
         {input.map((v, i) => (
-          <div key={i} className="p-2 bg-gray-900 rounded text-center text-xs font-mono">
+          <div key={i} className="p-2 bg-gray-100 dark:bg-gray-900 rounded text-center text-xs font-mono">
             <span className="text-blue-400">{v.toFixed(1)}</span>
             <span className="text-gray-500"> → </span>
             <b className="text-green-400">{activate(v, fn).toFixed(3)}</b>
@@ -239,18 +239,18 @@ function BackpropLab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap items-center">
-        <label className="text-xs text-gray-400">LR:
-          <select value={lr} onChange={e => setLr(+e.target.value)} className="ml-1 px-2 py-1 rounded text-xs bg-gray-800 text-white border border-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">LR:
+          <select value={lr} onChange={e => setLr(+e.target.value)} className="ml-1 px-2 py-1 rounded text-xs bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600">
             {[0.1, 0.3, 0.5, 1.0, 2.0].map(v => <option key={v} value={v}>{v}</option>)}
           </select>
         </label>
         <button onClick={() => setAuto(!auto)} className={`px-3 py-1 rounded text-xs font-bold text-white ${auto ? 'bg-red-600' : 'bg-green-600'}`}>{auto ? '⏸' : '▶ Auto Step'}</button>
-        <button onClick={() => setStep(0)} className="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">↺</button>
-        <button onClick={doUpdate} className="px-3 py-1 rounded text-xs font-bold bg-blue-600 text-white">Apply Update</button>
+        <button onClick={() => setStep(0)} className="px-2 py-1 rounded text-xs bg-gray-700 text-gray-700 dark:text-gray-300">↺</button>
+        <button onClick={doUpdate} className="px-3 py-1 rounded text-xs font-bold bg-blue-600 text-gray-900 dark:text-white">Apply Update</button>
       </div>
 
       {/* Network diagram */}
-      <div className="p-4 bg-gray-900 rounded-lg">
+      <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg">
         <div className="flex items-center justify-center gap-8 flex-wrap">
           <div className="text-center">
             <p className="text-xs text-green-400 font-bold mb-2">Input</p>
@@ -287,19 +287,19 @@ function BackpropLab() {
       {/* Current step */}
       <div className="p-4 rounded-lg" style={{ background: `${STEPS[step].c}11`, border: `1px solid ${STEPS[step].c}44` }}>
         <h4 className="font-bold text-white text-sm mb-2">{STEPS[step].t}</h4>
-        <p className="text-xs font-mono text-gray-300">{STEPS[step].d}</p>
+        <p className="text-xs font-mono text-gray-700 dark:text-gray-300">{STEPS[step].d}</p>
         {STEPS[step].d2 && <p className="text-xs font-mono text-gray-400 mt-1">{STEPS[step].d2}</p>}
       </div>
 
       {/* Gradient table */}
       {step >= 4 && (
-        <div className="p-3 bg-gray-900 rounded-lg">
+        <div className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg">
           <p className="text-xs font-bold text-orange-400 mb-2">Gradient Table:</p>
           <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-            <div className="p-2 bg-gray-800 rounded"><span className="text-gray-400">∂L/∂w₁ = </span><span className="text-orange-300">{dL_dw1_0.toFixed(6)}</span></div>
-            <div className="p-2 bg-gray-800 rounded"><span className="text-gray-400">∂L/∂w₂ = </span><span className="text-orange-300">{dL_dw1_1.toFixed(6)}</span></div>
-            <div className="p-2 bg-gray-800 rounded"><span className="text-gray-400">∂L/∂w₃ = </span><span className="text-orange-300">{dL_dw2.toFixed(6)}</span></div>
-            <div className="p-2 bg-gray-800 rounded"><span className="text-gray-400">∂L/∂b₁ = </span><span className="text-orange-300">{dL_db1.toFixed(6)}</span></div>
+            <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded"><span className="text-gray-600 dark:text-gray-400">∂L/∂w₁ = </span><span className="text-orange-300">{dL_dw1_0.toFixed(6)}</span></div>
+            <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded"><span className="text-gray-600 dark:text-gray-400">∂L/∂w₂ = </span><span className="text-orange-300">{dL_dw1_1.toFixed(6)}</span></div>
+            <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded"><span className="text-gray-600 dark:text-gray-400">∂L/∂w₃ = </span><span className="text-orange-300">{dL_dw2.toFixed(6)}</span></div>
+            <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded"><span className="text-gray-600 dark:text-gray-400">∂L/∂b₁ = </span><span className="text-orange-300">{dL_db1.toFixed(6)}</span></div>
           </div>
         </div>
       )}
@@ -332,8 +332,8 @@ function RNNCellLab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">{seq.map((v, i) => <button key={i} onClick={() => setStep(i)} className={`px-3 py-2 rounded text-xs font-bold ${i === step ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>t={i} (x={v})</button>)}</div>
-      <div className="p-4 bg-gray-900 rounded-lg space-y-2 text-xs font-mono">
+      <div className="flex gap-2">{seq.map((v, i) => <button key={i} onClick={() => setStep(i)} className={`px-3 py-2 rounded text-xs font-bold ${i === step ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>t={i} (x={v})</button>)}</div>
+      <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg space-y-2 text-xs font-mono">
         <p className="text-green-400">x_{step} = {cur.x.toFixed(2)}</p>
         <p className="text-purple-400">h_{step > 0 ? step - 1 : 'init'} = [{cur.hPrev.map(v => v.toFixed(3)).join(', ')}]</p>
         <p className="text-yellow-400">z = W_xh·x + W_hh·h + b = [{cur.z.map(v => v.toFixed(3)).join(', ')}]</p>
@@ -363,21 +363,21 @@ function ReparamLab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-4 flex-wrap">
-        <label className="text-xs text-gray-400">μ₁: <input type="range" min={-2} max={2} step={0.1} value={mu[0]} onChange={e => setMu([+e.target.value, mu[1]])} className="w-24" /> {mu[0].toFixed(1)}</label>
-        <label className="text-xs text-gray-400">μ₂: <input type="range" min={-2} max={2} step={0.1} value={mu[1]} onChange={e => setMu([mu[0], +e.target.value])} className="w-24" /> {mu[1].toFixed(1)}</label>
+        <label className="text-xs text-gray-600 dark:text-gray-400">μ₁: <input type="range" min={-2} max={2} step={0.1} value={mu[0]} onChange={e => setMu([+e.target.value, mu[1]])} className="w-24" /> {mu[0].toFixed(1)}</label>
+        <label className="text-xs text-gray-600 dark:text-gray-400">μ₂: <input type="range" min={-2} max={2} step={0.1} value={mu[1]} onChange={e => setMu([mu[0], +e.target.value])} className="w-24" /> {mu[1].toFixed(1)}</label>
       </div>
-      <button onClick={() => setLastSample(sample())} className="px-4 py-2 rounded text-sm font-bold bg-purple-600 text-white">🎲 Sample z = μ + σ × ε</button>
+      <button onClick={() => setLastSample(sample())} className="px-4 py-2 rounded text-sm font-bold bg-purple-600 text-gray-900 dark:text-white">🎲 Sample z = μ + σ × ε</button>
       {lastSample && (
-        <div className="p-3 bg-gray-900 rounded-lg text-xs font-mono space-y-1">
+        <div className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg text-xs font-mono space-y-1">
           <p className="text-purple-400">μ = [{mu.map(v => v.toFixed(2)).join(', ')}]</p>
           <p className="text-pink-400">σ = [{lastSample.std.map((v: number) => v.toFixed(3)).join(', ')}]</p>
-          <p className="text-gray-400">ε = [{lastSample.eps.map((v: number) => v.toFixed(3)).join(', ')}]</p>
+          <p className="text-gray-600 dark:text-gray-400">ε = [{lastSample.eps.map((v: number) => v.toFixed(3)).join(', ')}]</p>
           <p className="text-green-400 font-bold">z = [{lastSample.z.map((v: number) => v.toFixed(3)).join(', ')}]</p>
         </div>
       )}
       {samples.length > 0 && (
-        <div className="p-3 bg-gray-900 rounded-lg">
-          <p className="text-xs text-gray-400 mb-2">{samples.length} samples plotted:</p>
+        <div className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{samples.length} samples plotted:</p>
           <div className="relative" style={{ width: 200, height: 200, background: '#0f172a', borderRadius: 8, border: '1px solid #334155' }}>
             {samples.map((z, i) => (
               <div key={i} className="absolute w-2 h-2 rounded-full bg-blue-500" style={{ left: `${(z[0] + 3) / 6 * 100}%`, top: `${(z[1] + 3) / 6 * 100}%`, opacity: 0.6 + i / samples.length * 0.4 }} />
@@ -402,9 +402,9 @@ function TFComparisonLab() {
   useEffect(() => { const t = setInterval(() => setStep(p => (p + 1) % tokens.length), 800); return () => clearInterval(t); }, []);
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 mb-4">{['rnn','transformer'].map(m => <button key={m} onClick={() => setMode(m as any)} className={`px-4 py-2 rounded text-xs font-bold ${mode === m ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-gray-400'}`}>{m === 'rnn' ? '🔄 RNN (Sequential)' : '⚡ Transformer (Parallel)'}</button>)}</div>
-      <div className="p-4 bg-gray-900 rounded-lg">
-        <p className="text-xs text-gray-400 mb-3">{mode === 'rnn' ? 'RNN processes tokens one-by-one, left to right:' : 'Transformer processes ALL tokens simultaneously:'}</p>
+      <div className="flex gap-2 mb-4">{['rnn','transformer'].map(m => <button key={m} onClick={() => setMode(m as any)} className={`px-4 py-2 rounded text-xs font-bold ${mode === m ? 'bg-yellow-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{m === 'rnn' ? '🔄 RNN (Sequential)' : '⚡ Transformer (Parallel)'}</button>)}</div>
+      <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">{mode === 'rnn' ? 'RNN processes tokens one-by-one, left to right:' : 'Transformer processes ALL tokens simultaneously:'}</p>
         <div className="flex gap-3 items-center flex-wrap">
           {tokens.map((t, i) => {
             const active = mode === 'rnn' ? i <= step : true;
@@ -421,7 +421,7 @@ function TFComparisonLab() {
         {mode === 'transformer' && <div className="mt-3"><p className="text-xs text-green-400">Every token sees every other token directly via attention — no bottleneck!</p><div className="flex gap-1 mt-2">{tokens.map((_, i) => <div key={i} className="flex gap-0.5">{tokens.map((_, j) => <div key={j} className="w-3 h-3 rounded-sm" style={{ background: `rgba(59,130,246,${0.2 + Math.random() * 0.6})` }} />)}</div>)}</div></div>}
       </div>
       <div className="p-3 rounded-lg" style={{ background: mode === 'rnn' ? '#7f1d1d22' : '#052e1622', border: `1px solid ${mode === 'rnn' ? '#dc262633' : '#16a34a33'}` }}>
-        <p className="text-xs text-gray-300">{mode === 'rnn' ? '❌ Sequential → slow, can\'t parallelize. Token 5 must wait for tokens 1-4. Long-range dependencies lost through bottleneck.' : '✅ Parallel → fast on GPUs. Every token directly attends to every other. No information bottleneck. O(n²) attention but highly parallelizable.'}</p>
+        <p className="text-xs text-gray-700 dark:text-gray-300">{mode === 'rnn' ? '❌ Sequential → slow, can\'t parallelize. Token 5 must wait for tokens 1-4. Long-range dependencies lost through bottleneck.' : '✅ Parallel → fast on GPUs. Every token directly attends to every other. No information bottleneck. O(n²) attention but highly parallelizable.'}</p>
       </div>
     </div>
   );
@@ -441,8 +441,8 @@ function EmbeddingLab() {
 
   return (
     <div className="space-y-4">
-      <div><label className="text-xs text-gray-400">Enter tokens (space-separated):</label><input value={inputText} onChange={e => setInputText(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg text-sm bg-gray-800 text-white border border-gray-600" /></div>
-      <p className="text-xs text-gray-400">Each token → {dModel}-dim embedding vector:</p>
+      <div><label className="text-xs text-gray-600 dark:text-gray-400">Enter tokens (space-separated):</label><input value={inputText} onChange={e => setInputText(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg text-sm bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600" /></div>
+      <p className="text-xs text-gray-600 dark:text-gray-400">Each token → {dModel}-dim embedding vector:</p>
       <div className="space-y-2">{tokens.slice(0, 6).map((t, i) => (
         <div key={i} className="flex items-center gap-3">
           <span className="text-xs font-bold text-green-400 w-16 text-right font-mono">"{t}"</span>
@@ -452,7 +452,7 @@ function EmbeddingLab() {
       ))}</div>
       {tokens.length >= 2 && (
         <div>
-          <p className="text-xs text-gray-400 mt-4 mb-2">Cosine Similarity Matrix (similar tokens → higher value):</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-4 mb-2">Cosine Similarity Matrix (similar tokens → higher value):</p>
           <div className="inline-grid gap-1" style={{ gridTemplateColumns: `60px repeat(${tokens.length}, 48px)` }}>
             <div />
             {tokens.map((t, j) => <div key={j} className="text-center text-xs font-bold text-blue-400 truncate">{t.slice(0, 5)}</div>)}
@@ -493,17 +493,17 @@ function PELab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-4 flex-wrap">
-        <label className="text-xs text-gray-400">Dimensions: <b className="text-white">{dModel}</b><input type="range" min={4} max={16} step={2} value={dModel} onChange={e => setDModel(+e.target.value)} className="ml-2 w-24" /></label>
-        <label className="text-xs text-gray-400">Seq Length: <b className="text-white">{seqLen}</b><input type="range" min={4} max={20} value={seqLen} onChange={e => setSeqLen(+e.target.value)} className="ml-2 w-24" /></label>
+        <label className="text-xs text-gray-600 dark:text-gray-400">Dimensions: <b className="text-gray-900 dark:text-white">{dModel}</b><input type="range" min={4} max={16} step={2} value={dModel} onChange={e => setDModel(+e.target.value)} className="ml-2 w-24" /></label>
+        <label className="text-xs text-gray-600 dark:text-gray-400">Seq Length: <b className="text-gray-900 dark:text-white">{seqLen}</b><input type="range" min={4} max={20} value={seqLen} onChange={e => setSeqLen(+e.target.value)} className="ml-2 w-24" /></label>
       </div>
       <canvas ref={ref} style={{ width: 320, height: 180, borderRadius: 8, border: '1px solid #334155' }} />
-      <p className="text-xs text-gray-400">Each row is a unique positional signature. Sine waves have different frequencies per dimension — the model can learn to compute relative positions from these patterns.</p>
-      <div className="p-3 bg-gray-900 rounded-lg text-xs font-mono">
+      <p className="text-xs text-gray-600 dark:text-gray-400">Each row is a unique positional signature. Sine waves have different frequencies per dimension — the model can learn to compute relative positions from these patterns.</p>
+      <div className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg text-xs font-mono">
         <p className="text-cyan-400">PE(pos, 2i) = sin(pos / 10000^(2i/{dModel}))</p>
         <p className="text-orange-400">PE(pos, 2i+1) = cos(pos / 10000^(2i/{dModel}))</p>
       </div>
-      <p className="text-xs text-gray-400">Sample — Position 0: [{pe[0]?.map(v => v.toFixed(2)).join(', ')}]</p>
-      <p className="text-xs text-gray-400">Position {seqLen - 1}: [{pe[seqLen - 1]?.map(v => v.toFixed(2)).join(', ')}]</p>
+      <p className="text-xs text-gray-600 dark:text-gray-400">Sample — Position 0: [{pe[0]?.map(v => v.toFixed(2)).join(', ')}]</p>
+      <p className="text-xs text-gray-600 dark:text-gray-400">Position {seqLen - 1}: [{pe[seqLen - 1]?.map(v => v.toFixed(2)).join(', ')}]</p>
     </div>
   );
 }
@@ -542,15 +542,15 @@ function SelfAttentionLab() {
 
   return (
     <div className="space-y-4">
-      <input value={sentence} onChange={e => setSentence(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm bg-gray-800 text-white border border-gray-600" placeholder="Enter a sentence..." />
-      <div className="flex gap-2">{(['qkv','scores','softmax'] as const).map(s => <button key={s} onClick={() => setShowStep(s)} className={`px-3 py-1 rounded text-xs font-bold ${showStep === s ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>{s === 'qkv' ? '🔑 Q·Kᵀ' : s === 'scores' ? '📊 Scaled Scores' : '🎯 Softmax Weights'}</button>)}</div>
+      <input value={sentence} onChange={e => setSentence(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600" placeholder="Enter a sentence..." />
+      <div className="flex gap-2">{(['qkv','scores','softmax'] as const).map(s => <button key={s} onClick={() => setShowStep(s)} className={`px-3 py-1 rounded text-xs font-bold ${showStep === s ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{s === 'qkv' ? '🔑 Q·Kᵀ' : s === 'scores' ? '📊 Scaled Scores' : '🎯 Softmax Weights'}</button>)}</div>
       <div className="flex gap-6 items-start flex-wrap">
         <canvas ref={ref} style={{ width: 220, height: 220, borderRadius: 8, border: '1px solid #334155' }} />
         <div>
-          <p className="text-xs text-gray-400 mb-2">Token attention distribution:</p>
-          <div className="flex gap-2 mb-3 flex-wrap">{tokens.map((t, i) => <button key={i} onClick={() => setSelTok(i)} className={`px-2 py-1 rounded text-xs font-bold ${i === selTok ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>{t}</button>)}</div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Token attention distribution:</p>
+          <div className="flex gap-2 mb-3 flex-wrap">{tokens.map((t, i) => <button key={i} onClick={() => setSelTok(i)} className={`px-2 py-1 rounded text-xs font-bold ${i === selTok ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{t}</button>)}</div>
           {tokens.map((t, j) => (
-            <div key={j} className="flex items-center gap-2 mb-1"><span className="text-xs text-gray-500 w-12 text-right font-mono">{t}</span><div className="flex-1 h-4 bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 140 }}><div className="h-full bg-blue-500 rounded" style={{ width: `${attnWeights[selTok]?.[j] * 100 || 0}%` }} /></div><span className="text-xs text-gray-400 font-mono w-10">{((attnWeights[selTok]?.[j] || 0) * 100).toFixed(0)}%</span></div>
+            <div key={j} className="flex items-center gap-2 mb-1"><span className="text-xs text-gray-600 dark:text-gray-500 w-12 text-right font-mono">{t}</span><div className="flex-1 h-4 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 140 }}><div className="h-full bg-blue-500 rounded" style={{ width: `${attnWeights[selTok]?.[j] * 100 || 0}%` }} /></div><span className="text-xs text-gray-600 dark:text-gray-400 font-mono w-10">{((attnWeights[selTok]?.[j] || 0) * 100).toFixed(0)}%</span></div>
           ))}
         </div>
       </div>
@@ -572,8 +572,8 @@ function MultiHeadLab() {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-gray-400">Each head learns a <b className="text-white">different type of relationship</b> between tokens:</p>
-      <div className="flex gap-2 flex-wrap">{headNames.map((name, h) => <button key={h} onClick={() => setSelHead(h)} className={`px-3 py-1.5 rounded text-xs font-bold ${selHead === h ? 'bg-yellow-600 text-black' : 'bg-gray-800 text-gray-400'}`}>Head {h + 1}: {name}</button>)}</div>
+      <p className="text-xs text-gray-600 dark:text-gray-400">Each head learns a <b className="text-gray-900 dark:text-white">different type of relationship</b> between tokens:</p>
+      <div className="flex gap-2 flex-wrap">{headNames.map((name, h) => <button key={h} onClick={() => setSelHead(h)} className={`px-3 py-1.5 rounded text-xs font-bold ${selHead === h ? 'bg-yellow-600 text-black' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>Head {h + 1}: {name}</button>)}</div>
       <div className="flex gap-6 items-start flex-wrap">
         {/* Selected head heatmap */}
         <div>
@@ -585,7 +585,7 @@ function MultiHeadLab() {
         </div>
         {/* All heads side-by-side mini */}
         <div>
-          <p className="text-xs font-bold text-gray-400 mb-2">All {numHeads} heads compared:</p>
+          <p className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">All {numHeads} heads compared:</p>
           <div className="flex gap-3">
             {heads.map((head, h) => (
               <div key={h} className="text-center cursor-pointer" onClick={() => setSelHead(h)} style={{ opacity: h === selHead ? 1 : 0.5 }}>
@@ -598,7 +598,7 @@ function MultiHeadLab() {
           </div>
         </div>
       </div>
-      <div className="p-3 bg-gray-900 rounded-lg text-xs font-mono text-gray-400">
+      <div className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg text-xs font-mono text-gray-600 dark:text-gray-400">
         MultiHead = Concat(Head₁, Head₂, Head₃, Head₄) × W_O → <span className="text-green-400">[{n}×{n * 2}] → [{n}×{n * 2}]</span>
       </div>
     </div>
@@ -618,7 +618,7 @@ function TransformerBlockLab() {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-gray-400">Click each stage to see the tensor values flowing through:</p>
+      <p className="text-xs text-gray-600 dark:text-gray-400">Click each stage to see the tensor values flowing through:</p>
       <div className="flex gap-1 items-center flex-wrap">
         {stages.map((s, i) => (
           <React.Fragment key={i}>
@@ -627,7 +627,7 @@ function TransformerBlockLab() {
           </React.Fragment>
         ))}
       </div>
-      <div className="p-4 bg-gray-900 rounded-lg">
+      <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg">
         <p className="text-xs font-bold mb-3" style={{ color: stageColors[curStage] }}>Stage: {stages[curStage]} — tensor [{tokens.length}×{dModel}]</p>
         {tokens.map((t, i) => (
           <div key={i} className="flex items-center gap-3 mb-2">
@@ -640,7 +640,7 @@ function TransformerBlockLab() {
           </div>
         ))}
       </div>
-      <div className="p-3 rounded-lg bg-gray-900 text-xs text-gray-400">
+      <div className="p-3 rounded-lg bg-gray-900 text-xs text-gray-600 dark:text-gray-400">
         {curStage === 0 && 'Embeddings + Positional Encoding → position-aware token representations.'}
         {curStage === 1 && 'Multi-Head Self-Attention: every token attends to every other token via Q·Kᵀ/√dₖ softmax.'}
         {curStage === 2 && 'Residual connection (x + attention(x)) followed by Layer Normalization.'}
@@ -656,7 +656,7 @@ function TransformerBlockLab() {
    LESSON LAB MAPPING
    ═══════════════════════════════════════════════════════════ */
 const LESSON_LABS: Record<string, { title: string; component: React.FC }> = {
-  'cnn-1': { title: 'Image as Matrix', component: () => <div className="space-y-4"><p className="text-sm text-gray-300">Try changing pixel values to see how images are represented as numbers:</p><SmallGrid data={[[0,0,0,0,0,0,0,0],[0,0,1,1,1,1,0,0],[0,1,0,0,0,0,1,0],[0,1,0,1,0,1,0,0],[0,1,0,0,0,0,1,0],[0,0,1,0,0,1,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0]]} cellSize={32} label="Smiley face as 8×8 matrix" colorFn={(v: number) => v > 0.5 ? '#facc15' : '#1e293b'} /></div> },
+  'cnn-1': { title: 'Image as Matrix', component: () => <div className="space-y-4"><p className="text-sm text-gray-700 dark:text-gray-300">Try changing pixel values to see how images are represented as numbers:</p><SmallGrid data={[[0,0,0,0,0,0,0,0],[0,0,1,1,1,1,0,0],[0,1,0,0,0,0,1,0],[0,1,0,1,0,1,0,0],[0,1,0,0,0,0,1,0],[0,0,1,0,0,1,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0]]} cellSize={32} label="Smiley face as 8×8 matrix" colorFn={(v: number) => v > 0.5 ? '#facc15' : '#1e293b'} /></div> },
   'cnn-2': { title: 'Convolution Explorer', component: ConvolutionLab },
   'cnn-3': { title: 'Filter Gallery', component: ConvolutionLab },
   'cnn-4': { title: 'Activation Explorer', component: ActivationLab },
@@ -721,8 +721,8 @@ export const LessonLab: React.FC = () => {
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-4">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">🧪 {lab.title}</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Lesson Lab · {lessonId}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">🧪 {lab.title}</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-600 dark:text-gray-400">Lesson Lab · {lessonId}</p>
         </div>
         <div className="rounded-2xl p-6 bg-white dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 shadow-lg">
           <LabComponent />

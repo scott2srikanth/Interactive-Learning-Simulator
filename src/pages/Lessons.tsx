@@ -40,7 +40,7 @@ const FlowDiagram: React.FC<{steps: {label: string; color: string}[]}> = ({steps
 // Grid visual — small matrix of colored cells
 const GridVisual: React.FC<{data: number[][]; cellSize?: number; label?: string; colorFn?: (v:number) => string}> = ({data, cellSize=28, label, colorFn}) => (
   <div className="my-3 inline-block">
-    {label && <p className="text-xs font-semibold text-gray-600 mb-1">{label}</p>}
+    {label && <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 dark:text-gray-500 mb-1">{label}</p>}
     <div style={{display:'inline-grid', gridTemplateColumns:`repeat(${data[0]?.length||1}, ${cellSize}px)`, gap:1}}>
       {data.flat().map((v,i) => (
         <div key={i} style={{width:cellSize, height:cellSize, display:'flex', alignItems:'center', justifyContent:'center', fontSize: cellSize < 24 ? 7 : 9, fontWeight:600, fontFamily:'monospace', borderRadius:3, background: colorFn ? colorFn(v) : `rgb(${Math.round(v*255)},${Math.round(v*255)},${Math.round(v*255)})`, color: v > 0.5 ? '#000' : '#fff', border:'1px solid #e2e8f0'}}>
@@ -147,7 +147,7 @@ const PoolDemo: React.FC = () => {
       </div>
       <div className="text-center">
         <span className="text-2xl text-orange-500 font-bold">Max Pool</span><br/>
-        <span className="text-xs text-gray-500">2×2, stride 2</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">2×2, stride 2</span>
       </div>
       <div>
         <GridVisual data={maxOut} cellSize={44} label="Output 2×2" colorFn={v=>`rgba(34,197,94,${v/8+0.2})`} />
@@ -303,9 +303,9 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
       <div className="space-y-4">
         <p className="text-gray-700 dark:text-gray-300">A single neuron draws a <b>linear boundary</b>. Hidden layers create <b>non-linear boundaries</b>.</p>
         <div className="flex gap-6 flex-wrap justify-center my-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200"><p className="font-bold text-sm mb-2">0 hidden layers</p><p className="text-xs text-gray-600">Linear boundary only</p><p className="text-xs text-red-500">❌ Cannot solve XOR</p></div>
-          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200"><p className="font-bold text-sm mb-2">1 hidden layer (4n)</p><p className="text-xs text-gray-600">Non-linear boundary</p><p className="text-xs text-green-600">✓ Solves XOR, circles</p></div>
-          <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200"><p className="font-bold text-sm mb-2">2+ hidden layers</p><p className="text-xs text-gray-600">Complex boundaries</p><p className="text-xs text-green-600">✓ Spirals, any shape</p></div>
+          <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"><p className="font-bold text-sm mb-2 text-gray-900 dark:text-white">0 hidden layers</p><p className="text-xs text-gray-600 dark:text-gray-400">Linear boundary only</p><p className="text-xs text-red-500">❌ Cannot solve XOR</p></div>
+          <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"><p className="font-bold text-sm mb-2 text-gray-900 dark:text-white">1 hidden layer (4n)</p><p className="text-xs text-gray-600 dark:text-gray-400">Non-linear boundary</p><p className="text-xs text-green-600">✓ Solves XOR, circles</p></div>
+          <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800"><p className="font-bold text-sm mb-2 text-gray-900 dark:text-white">2+ hidden layers</p><p className="text-xs text-gray-600 dark:text-gray-400">Complex boundaries</p><p className="text-xs text-green-600">✓ Spirals, any shape</p></div>
         </div>
         <InfoBox color="blue" title="Universal Approximation"><p>A neural network with at least one hidden layer can approximate <b>any continuous function</b> — given enough neurons.</p></InfoBox>
       </div>
@@ -342,9 +342,9 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
       <div className="space-y-4">
         <p className="text-gray-700 dark:text-gray-300">LSTM has a <b>cell state</b> (long-term memory) and <b>3 gates</b> controlling information flow.</p>
         <div className="flex gap-3 flex-wrap justify-center my-4">
-          <div className="p-3 rounded-lg bg-red-50 border border-red-300 text-center w-40"><p className="font-bold text-red-700">🚪 Forget Gate</p><p className="text-xs text-gray-600 mt-1">f = σ(W·[h,x]+b)</p><p className="text-xs text-red-600">What to REMOVE</p></div>
-          <div className="p-3 rounded-lg bg-green-50 border border-green-300 text-center w-40"><p className="font-bold text-green-700">🚪 Input Gate</p><p className="text-xs text-gray-600 mt-1">i = σ(W·[h,x]+b)</p><p className="text-xs text-green-600">What to ADD</p></div>
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-300 text-center w-40"><p className="font-bold text-blue-700">🚪 Output Gate</p><p className="text-xs text-gray-600 mt-1">o = σ(W·[h,x]+b)</p><p className="text-xs text-blue-600">What to OUTPUT</p></div>
+          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 text-center w-40"><p className="font-bold text-red-700">🚪 Forget Gate</p><p className="text-xs text-gray-600 dark:text-gray-400 mt-1">f = σ(W·[h,x]+b)</p><p className="text-xs text-red-600">What to REMOVE</p></div>
+          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 text-center w-40"><p className="font-bold text-green-700">🚪 Input Gate</p><p className="text-xs text-gray-600 dark:text-gray-400 mt-1">i = σ(W·[h,x]+b)</p><p className="text-xs text-green-600">What to ADD</p></div>
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 text-center w-40"><p className="font-bold text-blue-700">🚪 Output Gate</p><p className="text-xs text-gray-600 dark:text-gray-400 mt-1">o = σ(W·[h,x]+b)</p><p className="text-xs text-blue-600">What to OUTPUT</p></div>
         </div>
         <MathBlock formula="cₜ = fₜ ⊙ cₜ₋₁ + iₜ ⊙ c̃ₜ" label="Cell state update (additive, not multiplicative!)" />
       </div>
@@ -385,7 +385,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
               <div key={i} className="absolute w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{left:p.x,top:p.y,background:p.c}}>{p.l}</div>
             ))}
           </div>
-          <p className="text-xs text-gray-500 mt-2">2D latent space: digits "3" cluster together, "7"s elsewhere</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">2D latent space: digits "3" cluster together, "7"s elsewhere</p>
         </div>
         <InfoBox color="green" title="✨ Generation"><p>Moving smoothly in latent space → smooth changes in output. This is what enables <b>generating new data</b>!</p></InfoBox>
       </div>
@@ -394,8 +394,8 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
       <div className="space-y-4">
         <p className="text-gray-700 dark:text-gray-300">Regular autoencoders map to <b>single points</b> → gaps in latent space. VAEs map to <b>distributions</b>.</p>
         <div className="flex gap-6 flex-wrap justify-center my-4">
-          <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200 w-48"><p className="font-bold text-red-700 mb-2">Regular AE ❌</p><p className="text-xs text-gray-600">Scattered points with gaps. Decoding a gap point → garbage output.</p></div>
-          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200 w-48"><p className="font-bold text-green-700 mb-2">VAE ✅</p><p className="text-xs text-gray-600">Overlapping distributions. Any point can be decoded → smooth generation.</p></div>
+          <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 w-48"><p className="font-bold text-red-700 mb-2">Regular AE ❌</p><p className="text-xs text-gray-600 dark:text-gray-400">Scattered points with gaps. Decoding a gap point → garbage output.</p></div>
+          <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 w-48"><p className="font-bold text-green-700 mb-2">VAE ✅</p><p className="text-xs text-gray-600 dark:text-gray-400">Overlapping distributions. Any point can be decoded → smooth generation.</p></div>
         </div>
         <MathBlock formula="Encode: x → q(z|x) = N(μ, σ²)" label="VAE encodes to a distribution, not a point" />
       </div>
@@ -433,8 +433,8 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
       <div className="space-y-4">
         <p className="text-gray-700 dark:text-gray-300">RNNs process one token at a time → bottleneck. Transformers process <b>ALL tokens simultaneously</b>.</p>
         <div className="flex gap-6 flex-wrap justify-center my-4">
-          <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200 w-48"><p className="font-bold text-red-700 mb-2">RNN ❌</p><p className="text-xs text-gray-600">Sequential (slow). Long-range dependencies are hard. Cannot parallelize.</p></div>
-          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200 w-48"><p className="font-bold text-green-700 mb-2">Transformer ✅</p><p className="text-xs text-gray-600">Parallel (fast). Every token sees every other token directly. GPU-friendly.</p></div>
+          <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 w-48"><p className="font-bold text-red-700 mb-2">RNN ❌</p><p className="text-xs text-gray-600 dark:text-gray-400">Sequential (slow). Long-range dependencies are hard. Cannot parallelize.</p></div>
+          <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 w-48"><p className="font-bold text-green-700 mb-2">Transformer ✅</p><p className="text-xs text-gray-600 dark:text-gray-400">Parallel (fast). Every token sees every other token directly. GPU-friendly.</p></div>
         </div>
         <InfoBox color="blue" title="💡 Key Paper"><p>"Attention Is All You Need" (Vaswani et al., 2017). This paper started the modern AI revolution — GPT, BERT, and all LLMs are Transformers.</p></InfoBox>
       </div>
@@ -459,9 +459,9 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
       <div className="space-y-4">
         <p className="text-gray-700 dark:text-gray-300">Each token is projected into <b>Query</b>, <b>Key</b>, and <b>Value</b> vectors.</p>
         <div className="flex gap-3 flex-wrap justify-center my-4">
-          <div className="p-3 rounded-lg bg-red-50 border border-red-300 text-center w-44"><p className="font-bold text-red-700">🔴 Query (Q)</p><p className="text-xs text-gray-600">"What am I looking for?"</p></div>
-          <div className="p-3 rounded-lg bg-green-50 border border-green-300 text-center w-44"><p className="font-bold text-green-700">🟢 Key (K)</p><p className="text-xs text-gray-600">"What do I contain?"</p></div>
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-300 text-center w-44"><p className="font-bold text-blue-700">🔵 Value (V)</p><p className="text-xs text-gray-600">"What info do I provide?"</p></div>
+          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 text-center w-44"><p className="font-bold text-red-700">🔴 Query (Q)</p><p className="text-xs text-gray-600 dark:text-gray-400">"What am I looking for?"</p></div>
+          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 text-center w-44"><p className="font-bold text-green-700">🟢 Key (K)</p><p className="text-xs text-gray-600 dark:text-gray-400">"What do I contain?"</p></div>
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 text-center w-44"><p className="font-bold text-blue-700">🔵 Value (V)</p><p className="text-xs text-gray-600 dark:text-gray-400">"What info do I provide?"</p></div>
         </div>
         <MathBlock formula="Attention(Q,K,V) = softmax(Q·Kᵀ / √dₖ) × V" label="Scaled dot-product attention" />
         <MiniHeatmap data={[[0.1,0.7,0.1,0.1],[0.05,0.1,0.8,0.05],[0.2,0.2,0.1,0.5],[0.6,0.1,0.1,0.2]]} labels={['The','cat','sat','mat']} />
@@ -473,7 +473,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
         <p className="text-gray-700 dark:text-gray-300">One head learns one type of relationship. <b>Multiple heads</b> learn different relationships in parallel.</p>
         <div className="flex gap-3 flex-wrap justify-center my-4">
           {['Syntax','Semantics','Proximity','Coreference'].map((h,i) => (
-            <div key={i} className="p-2 rounded-lg bg-yellow-50 border border-yellow-300 text-center w-28"><p className="font-bold text-yellow-700 text-xs">Head {i+1}</p><p className="text-xs text-gray-600">{h}</p></div>
+            <div key={i} className="p-2 rounded-lg bg-yellow-50 border border-yellow-300 text-center w-28"><p className="font-bold text-yellow-700 text-xs">Head {i+1}</p><p className="text-xs text-gray-600 dark:text-gray-400">{h}</p></div>
           ))}
         </div>
         <FlowDiagram steps={[{label:'Head 1',color:'bg-yellow-500'},{label:'Head 2',color:'bg-orange-500'},{label:'Head 3',color:'bg-red-500'},{label:'Concat',color:'bg-purple-500'},{label:'W_O',color:'bg-blue-500'}]} />
@@ -537,7 +537,7 @@ export const Lessons: React.FC = () => {
                         <div className="text-3xl">{lesson.icon}</div>
                         {isCompleted ? <CheckCircle className="w-6 h-6 text-green-600" /> : <Circle className="w-6 h-6 text-gray-300" />}
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">{lesson.title}</h3>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{lesson.title}</h3>
                       <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{lesson.description}</p>
                       <Button variant="outline" size="sm" className="w-full">{isCompleted ? 'Review Lesson' : 'Start Lesson'}</Button>
                     </div>
