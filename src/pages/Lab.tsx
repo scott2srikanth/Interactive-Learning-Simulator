@@ -30,7 +30,7 @@ const LIGHT_CSS = `
   color: #1e293b !important;
 }
 .lab-light > div[style*="background"] {
-  background: linear-gradient(145deg, #eff6ff, #f8fafc, #f0fdf4) !important;
+  background: linear-gradient(145deg, #fffbf0, #fefcf6, #fffdf5) !important;
 }
 
 /* ── All text: default to dark ── */
@@ -67,8 +67,8 @@ const LIGHT_CSS = `
 .lab-light [style*="position: sticky"],
 .lab-light [style*="backdrop-filter"],
 .lab-light div[style*="rgba(2,6,23"] {
-  background: rgba(255,255,255,0.95) !important;
-  border-color: #e2e8f0 !important;
+  background: rgba(255,253,245,0.95) !important;
+  border-color: #efe3d0 !important;
 }
 .lab-light [style*="position: sticky"] h1,
 .lab-light [style*="position: sticky"] span {
@@ -77,27 +77,27 @@ const LIGHT_CSS = `
 
 /* ── Cards and panels ── */
 .lab-light div[style*="rgba(15,23,42"] {
-  background: #ffffff !important;
-  border-color: #e2e8f0 !important;
+  background: #fffef9 !important;
+  border-color: #efe3d0 !important;
 }
 .lab-light div[style*="background: #0f172a"] {
-  background: #f1f5f9 !important;
-  border-color: #e2e8f0 !important;
+  background: #fefcf3 !important;
+  border-color: #efe3d0 !important;
 }
 
 /* ── Sidebar panels ── */
 .lab-light div[style*="border: 1px solid #1e293b"],
 .lab-light div[style*="border: 1px solid #334155"] {
-  border-color: #e2e8f0 !important;
+  border-color: #efe3d0 !important;
 }
 
 /* ── Inputs, selects, number inputs ── */
 .lab-light select,
 .lab-light input[type="number"],
 .lab-light input[type="text"] {
-  background: #f1f5f9 !important;
+  background: #fefcf3 !important;
   color: #1e293b !important;
-  border-color: #cbd5e1 !important;
+  border-color: #e0d4c0 !important;
 }
 
 /* ── Range inputs ── */
@@ -108,26 +108,26 @@ const LIGHT_CSS = `
 /* ── Buttons with dark bg ── */
 .lab-light button[style*="background: #1e293b"],
 .lab-light button[style*="background:#1e293b"] {
-  background: #e2e8f0 !important;
+  background: #f5efe4 !important;
   color: #475569 !important;
-  border-color: #cbd5e1 !important;
+  border-color: #e0d4c0 !important;
 }
 .lab-light button[style*="background: #0f172a"] {
-  background: #f1f5f9 !important;
+  background: #fefcf3 !important;
   color: #334155 !important;
-  border-color: #e2e8f0 !important;
+  border-color: #efe3d0 !important;
 }
 
 /* ── Layer cards (ANN/CNN) — the main visible issue ── */
 .lab-light div[style*="borderRadius: 10"][style*="background: rgba(15"] {
-  background: #ffffff !important;
-  border-color: #e2e8f0 !important;
+  background: #fffef9 !important;
+  border-color: #efe3d0 !important;
 }
 .lab-light div[style*="borderRadius: 10"][style*="border: 1px solid"] {
-  border-color: #e2e8f0 !important;
+  border-color: #efe3d0 !important;
 }
 .lab-light div[style*="borderTop: \"1px solid"] {
-  border-color: #e2e8f0 !important;
+  border-color: #efe3d0 !important;
 }
 
 /* ── Semi-transparent colored backgrounds (keep but lighten) ── */
@@ -155,7 +155,7 @@ const LIGHT_CSS = `
 
 /* ── Scrollbar ── */
 .lab-light *::-webkit-scrollbar-thumb {
-  background: #cbd5e1 !important;
+  background: #e8dcc8 !important;
 }
 .lab-light *::-webkit-scrollbar-track {
   background: transparent !important;
@@ -169,11 +169,11 @@ const LIGHT_CSS = `
 
 /* ── Fullscreen modal ── */
 .lab-light div[style*="position: fixed"][style*="inset: 0"] {
-  background: rgba(248,250,252,0.97) !important;
+  background: rgba(255,253,247,0.97) !important;
 }
 .lab-light div[style*="position: fixed"] div[style*="background: rgba(15"] {
-  background: #ffffff !important;
-  border-color: #e2e8f0 !important;
+  background: #fffef9 !important;
+  border-color: #efe3d0 !important;
 }
 
 /* ── Grid cells inside layer details keep their computed colors ── */
