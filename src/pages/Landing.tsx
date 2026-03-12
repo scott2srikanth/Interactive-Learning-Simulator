@@ -139,7 +139,7 @@ export const Landing: React.FC = () => {
           <p className="text-xl text-gray-600 mb-8">
             Join thousands of learners mastering CNNs through interactive visualization
           </p>
-          <Link to="/lessons">
+          <Link to="/topics">
             <Button size="lg">
               Begin First Lesson
             </Button>

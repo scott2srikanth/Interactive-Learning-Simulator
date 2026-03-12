@@ -5,18 +5,27 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Trophy, Star, Award, Target, BookOpen, Brain } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { TOPICS } from '../types/topics';
+
+const TOPIC_LESSONS: Record<string, { prefix: string; count: number; color: string; icon: string }> = {
+  cnn: { prefix: 'cnn-', count: 6, color: 'green', icon: '🔍' },
+  ann: { prefix: 'ann-', count: 6, color: 'blue', icon: '🧠' },
+  rnn: { prefix: 'rnn-', count: 6, color: 'orange', icon: '🔄' },
+  vae: { prefix: 'vae-', count: 6, color: 'pink', icon: '✨' },
+  transformers: { prefix: 'tf-', count: 6, color: 'violet', icon: '⚡' },
+};
 
 export const Dashboard: React.FC = () => {
   const { xp, level, completedLessons, earnedBadges, completedChallenges } = useUserStore();
 
   const xpForNextLevel = level * 100;
   const xpProgress = (xp % 100) / 100;
+  const totalLessons = 30; // 6 per topic × 5 topics
 
-  const completedBadges = badges.filter((badge) => earnedBadges.includes(badge.id));
-  const lockedBadges = badges.filter((badge) => !earnedBadges.includes(badge.id));
-
+  const completedBadges = badges.filter((b) => earnedBadges.includes(b.id));
+  const lockedBadges = badges.filter((b) => !earnedBadges.includes(b.id));
   const availableChallenges = challenges.filter((c) => !completedChallenges.includes(c.id));
-  const completed = challenges.filter((c) => completedChallenges.includes(c.id));
+  const completedCh = challenges.filter((c) => completedChallenges.includes(c.id));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -25,27 +34,18 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             <div className="flex space-x-2">
-              <Link to="/">
-                <Button variant="ghost">Home</Button>
-              </Link>
-              <Link to="/lessons">
-                <Button variant="ghost">Lessons</Button>
-              </Link>
-              <Link to="/lab">
-                <Button variant="primary">Go to Lab</Button>
-              </Link>
+              <Link to="/"><Button variant="ghost">Home</Button></Link>
+              <Link to="/topics"><Button variant="ghost">Topics</Button></Link>
+              <Link to="/leaderboard"><Button variant="ghost">Leaderboard</Button></Link>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+        {/* Stats cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <Card>
               <div className="flex items-center justify-between">
                 <div>
@@ -60,36 +60,25 @@ export const Dashboard: React.FC = () => {
                   <span>{xpForNextLevel}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{ width: `${xpProgress * 100}%` }}
-                  />
+                  <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: `${xpProgress * 100}%` }} />
                 </div>
               </div>
             </Card>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
             <Card>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Lessons Completed</p>
-                  <p className="text-4xl font-bold text-green-600">{completedLessons.length}/6</p>
+                  <p className="text-4xl font-bold text-green-600">{completedLessons.length}/{totalLessons}</p>
                 </div>
                 <BookOpen className="w-12 h-12 text-green-600" />
               </div>
             </Card>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
             <Card>
               <div className="flex items-center justify-between">
                 <div>
@@ -100,22 +89,64 @@ export const Dashboard: React.FC = () => {
               </div>
             </Card>
           </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Challenges Done</p>
+                  <p className="text-4xl font-bold text-purple-600">{completedChallenges.length}/{challenges.length}</p>
+                </div>
+                <Target className="w-12 h-12 text-purple-600" />
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
+        {/* Per-topic progress */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35 }} className="mb-8">
+          <Card title="Progress by Topic">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {Object.entries(TOPIC_LESSONS).map(([topicId, info]) => {
+                const topicLessons = completedLessons.filter(l => l.startsWith(info.prefix));
+                const pct = (topicLessons.length / info.count) * 100;
+                const topic = TOPICS.find(t => t.id === topicId);
+                return (
+                  <Link key={topicId} to={`/topics/${topicId}/lessons`}>
+                    <div className="p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">{info.icon}</span>
+                        <span className="text-sm font-semibold text-gray-900">{topic?.name?.split(' ')[0] || topicId.toUpperCase()}</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">{topicLessons.length}/{info.count} lessons</p>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            info.color === 'green' ? 'bg-green-500' :
+                            info.color === 'blue' ? 'bg-blue-500' :
+                            info.color === 'orange' ? 'bg-orange-500' :
+                            info.color === 'pink' ? 'bg-pink-500' : 'bg-violet-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      {pct === 100 && <p className="text-xs text-green-600 font-semibold mt-1">✓ Complete!</p>}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </Card>
+        </motion.div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Card title="Your Badges">
+          {/* Badges */}
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
+            <Card title={`Your Badges (${completedBadges.length}/${badges.length})`}>
               <div className="space-y-4">
                 {completedBadges.length > 0 ? (
                   completedBadges.map((badge) => (
-                    <div
-                      key={badge.id}
-                      className="flex items-center space-x-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200"
-                    >
+                    <div key={badge.id} className="flex items-center space-x-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                       <div className="text-4xl">{badge.icon}</div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900">{badge.name}</h4>
@@ -133,13 +164,10 @@ export const Dashboard: React.FC = () => {
 
                 {lockedBadges.length > 0 && (
                   <div className="mt-6">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Locked Badges</h4>
-                    <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Locked Badges ({lockedBadges.length})</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
                       {lockedBadges.map((badge) => (
-                        <div
-                          key={badge.id}
-                          className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg opacity-60"
-                        >
+                        <div key={badge.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg opacity-60">
                           <div className="text-2xl grayscale">{badge.icon}</div>
                           <div className="flex-1">
                             <h5 className="font-medium text-gray-700">{badge.name}</h5>
@@ -154,63 +182,51 @@ export const Dashboard: React.FC = () => {
             </Card>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <Card title="Active Challenges">
+          {/* Challenges */}
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
+            <Card title={`Challenges (${completedCh.length}/${challenges.length})`}>
               <div className="space-y-4">
                 {availableChallenges.length > 0 ? (
-                  availableChallenges.map((challenge) => (
-                    <div
-                      key={challenge.id}
-                      className="p-4 bg-blue-50 rounded-lg border border-blue-200"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">{challenge.title}</h4>
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            challenge.difficulty === 'easy'
-                              ? 'bg-green-100 text-green-800'
-                              : challenge.difficulty === 'medium'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {challenge.difficulty}
-                        </span>
+                  availableChallenges.slice(0, 6).map((challenge) => {
+                    const topicId = challenge.id.startsWith('cnn') ? 'cnn' : challenge.id.startsWith('ann') ? 'ann' : challenge.id.startsWith('rnn') ? 'rnn' : challenge.id.startsWith('vae') ? 'vae' : challenge.id.startsWith('tf') ? 'transformers' : '';
+                    return (
+                      <div key={challenge.id} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-gray-900">{challenge.title}</h4>
+                          <span className={`text-xs px-2 py-1 rounded ${challenge.difficulty === 'easy' ? 'bg-green-100 text-green-800' : challenge.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                            {challenge.difficulty}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-3">{challenge.description}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-blue-600">+{challenge.xp_reward} XP</span>
+                          <Link to={topicId ? `/topics/${topicId}/lab` : '/topics'}>
+                            <Button size="sm">Start Challenge</Button>
+                          </Link>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3">{challenge.description}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-blue-600">
-                          +{challenge.xp_reward} XP
-                        </span>
-                        <Link to="/lab">
-                          <Button size="sm">Start Challenge</Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <Target className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                    <p>All challenges completed!</p>
+                    <p>All challenges completed! 🎉</p>
                   </div>
                 )}
 
-                {completed.length > 0 && (
+                {availableChallenges.length > 6 && (
+                  <p className="text-sm text-gray-500 text-center">+{availableChallenges.length - 6} more challenges available</p>
+                )}
+
+                {completedCh.length > 0 && (
                   <div className="mt-6">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Completed</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Completed ({completedCh.length})</h4>
                     <div className="space-y-2">
-                      {completed.map((challenge) => (
-                        <div
-                          key={challenge.id}
-                          className="p-3 bg-green-50 rounded-lg border border-green-200 opacity-75"
-                        >
+                      {completedCh.map((c) => (
+                        <div key={c.id} className="p-3 bg-green-50 rounded-lg border border-green-200 opacity-75">
                           <div className="flex items-center justify-between">
-                            <span className="font-medium text-gray-700">{challenge.title}</span>
-                            <span className="text-green-600 text-sm">✓ Completed</span>
+                            <span className="font-medium text-gray-700">{c.title}</span>
+                            <span className="text-green-600 text-sm">✓ Done</span>
                           </div>
                         </div>
                       ))}
@@ -222,26 +238,22 @@ export const Dashboard: React.FC = () => {
           </motion.div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="mt-8"
-        >
+        {/* Quick Actions */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.6 }} className="mt-8">
           <Card title="Quick Actions">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link to="/lessons">
+              <Link to="/topics">
                 <div className="p-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white hover:shadow-lg transition-shadow cursor-pointer">
                   <Brain className="w-8 h-8 mb-2" />
-                  <h4 className="font-semibold mb-1">Continue Learning</h4>
-                  <p className="text-sm text-blue-100">Resume your lessons</p>
+                  <h4 className="font-semibold mb-1">Choose a Topic</h4>
+                  <p className="text-sm text-blue-100">CNN, ANN, RNN, VAE, Transformers</p>
                 </div>
               </Link>
-              <Link to="/lab">
+              <Link to="/topics/cnn/lab">
                 <div className="p-6 bg-gradient-to-br from-green-500 to-green-600 rounded-lg text-white hover:shadow-lg transition-shadow cursor-pointer">
                   <Target className="w-8 h-8 mb-2" />
-                  <h4 className="font-semibold mb-1">Open Lab</h4>
-                  <p className="text-sm text-green-100">Build your own CNN</p>
+                  <h4 className="font-semibold mb-1">Open a Lab</h4>
+                  <p className="text-sm text-green-100">Interactive simulators</p>
                 </div>
               </Link>
               <Link to="/leaderboard">

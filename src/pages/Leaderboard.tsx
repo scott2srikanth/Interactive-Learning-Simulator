@@ -58,7 +58,7 @@ export const Leaderboard: React.FC = () => {
               <Link to="/dashboard">
                 <Button variant="ghost">Dashboard</Button>
               </Link>
-              <Link to="/lab">
+              <Link to="/topics">
                 <Button variant="primary">Go to Lab</Button>
               </Link>
             </div>
@@ -143,7 +143,7 @@ export const Leaderboard: React.FC = () => {
               Keep learning and completing challenges to climb the leaderboard!
             </p>
             <div className="flex justify-center space-x-4">
-              <Link to="/lessons">
+              <Link to="/topics">
                 <Button variant="outline">Continue Learning</Button>
               </Link>
               <Link to="/dashboard">
