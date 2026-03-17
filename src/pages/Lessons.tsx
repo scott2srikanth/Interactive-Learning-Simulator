@@ -10,7 +10,8 @@ import { TOPICS } from '../types/topics';
 import {
   ContextMeaningDemo, TokenPill, EmbeddingBar, FlowArrow, MatrixGrid,
   AttentionArrows, DotGrid, SoftmaxAnim, ValueWeightedSum,
-  QKVProjection, MultiHeadSplit, TransformerBlockAnim, PipelineStep
+  QKVProjection, MultiHeadSplit, TransformerBlockAnim, PipelineStep,
+  TokenizationAnim, MaskGridAnim, CrossAttentionFlow, MemoryCube3D, InferencePipeline
 } from '../components/transformer/AnimatedComponents';
 
 /* ═══════════════════════════════════════════════════════════
@@ -434,120 +435,196 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     )},
   ],
   transformers: [
-    { id:'tf-1', title:'Why Attention? The Mole Problem', description:'Same word, different meanings — why context matters', icon:'🔍', content: (
+    { id:'tf-1', title:'Why Attention?', description:'Same word, different meanings — the problem attention solves', icon:'🔍', content: (
       <div className="space-y-5">
-        <p className="text-gray-700 dark:text-gray-300">Consider the word <b>"mole"</b> — it means completely different things depending on context. After the initial embedding step, the vector for "mole" is <b>the same in all cases</b>. Attention solves this.</p>
+        <p className="text-gray-700 dark:text-gray-300">Before transformers, models processed words <b>one at a time</b> (RNNs). The word "mole" always got the same vector — even though it means different things! <b>Attention</b> fixes this by letting every word look at every other word.</p>
         <ContextMeaningDemo />
-        <InfoBox color="blue" title="🧠 What Attention Does">
-          <p>Attention lets each token <b>look at every other token</b> and pull in relevant context. After attention, the embedding for "mole" in "shrew mole" is updated to encode the animal meaning, while "mole" in "carbon dioxide" encodes the chemistry meaning.</p>
-        </InfoBox>
-        <p className="text-gray-700 dark:text-gray-300">Think of it like this: at the end of a mystery novel, the final word "<b>was...</b>" needs to encode ALL relevant clues from thousands of previous words to predict the murderer. Attention is how that information gets passed.</p>
-        <FlowDiagram steps={[{label:'Initial embedding',color:'bg-gray-500'},{label:'+ Context from attention',color:'bg-blue-500'},{label:'= Refined embedding',color:'bg-green-500'}]} />
+        <InfoBox color="blue" title="💡 The Core Idea"><p>Attention lets each token ask: "Which other tokens in this sentence are relevant to MY meaning?" Then it <b>absorbs information</b> from those relevant tokens, updating its own vector.</p></InfoBox>
+        <p className="text-gray-700 dark:text-gray-300">Think of reading a mystery novel. The last word "was..." needs information from the ENTIRE book to predict "the butler." Attention makes this possible — even across thousands of tokens.</p>
+        <FlowDiagram steps={[{label:'Same word',color:'bg-gray-500'},{label:'+ Context via attention',color:'bg-blue-500'},{label:'= Different meanings',color:'bg-green-500'}]} />
       </div>
     )},
-    { id:'tf-2', title:'Token Embedding', description:'Converting words into vectors the model understands', icon:'📝', content: (() => {
-      const tokens = ['Data', 'visual', 'ization', 'empowers'];
-      const embs = tokens.map((t, i) => Array(8).fill(0).map((_, d) => Math.sin(t.charCodeAt(d % t.length) * 0.3 + d * 1.5) * 0.7));
+    { id:'tf-2', title:'Tokenization', description:'Breaking text into pieces the model can process', icon:'✂️', content: (() => {
+      const sentence = "I love India";
+      const tokens = ["I", "love", "India"];
       return (
         <div className="space-y-5">
-          <p className="text-gray-700 dark:text-gray-300">The first step: break text into <b>tokens</b> (words or subwords), then look up each token's <b>embedding vector</b> — a high-dimensional numerical representation.</p>
-          <div className="flex gap-2 flex-wrap items-end">{tokens.map((t, i) => <TokenPill key={i} word={t} idx={i} delay={i} sub={`id=${i}`} />)}</div>
-          <p className="text-gray-700 dark:text-gray-300 text-sm">Each token maps to a dense vector. GPT-2 uses 768 dimensions; we show 8 for clarity:</p>
-          {tokens.map((t, i) => <EmbeddingBar key={i} values={embs[i]} label={`"${t}" → 8-dim vector`} color={['#22c55e', '#3b82f6', '#f59e0b', '#a855f7'][i % 4]} delay={i * 0.15} />)}
-          <MathBlock formula="Embedding Matrix: [50,257 × 768]" label="GPT-2: 50K tokens, each a 768-dim vector (~39M parameters just for embeddings!)" />
-          <InfoBox color="green" title="💡 Key Insight"><p>Similar words end up with similar vectors. "King" and "queen" are close in embedding space, while "king" and "banana" are far apart.</p></InfoBox>
+          <p className="text-gray-700 dark:text-gray-300">The very first step: split the input text into <b>tokens</b>. A token can be a whole word, a subword, or even a single character. The model only understands numbers, not text!</p>
+          <TokenizationAnim sentence={sentence} tokens={tokens} />
+          <InfoBox color="green" title="📊 Vocabulary Size"><p>GPT-2 has a vocabulary of <b>50,257 tokens</b>. Every possible token gets a unique integer ID. "I"→0, "love"→1, "India"→2 (simplified). Unknown words get split into subwords.</p></InfoBox>
+          <InfoBox color="yellow" title="🇮🇳 Hindi Example"><p>"मुझे भारत पसंद है" → tokens: ["मुझे", "भारत", "पसंद", "है"]. Each Hindi token also gets an integer ID from the vocabulary.</p></InfoBox>
+          <MathBlock formula="Input: 'I love India' → Token IDs: [42, 1567, 3582]" label="Text becomes a sequence of integers" />
         </div>
       );
     })()},
-    { id:'tf-3', title:'Positional Encoding', description:'How the model knows word order', icon:'🌊', content: (() => {
-      const pe = Array.from({length: 6}).map((_, pos) => Array(8).fill(0).map((_, i) => i % 2 === 0 ? Math.sin(pos / Math.pow(10000, i / 8)) : Math.cos(pos / Math.pow(10000, (i - 1) / 8))));
+    { id:'tf-3', title:'Token Embedding', description:'Converting token IDs into 512-dimensional vectors', icon:'🔢', content: (() => {
+      const tokens = ['I', 'love', 'India'];
+      const embs = tokens.map((t, i) => Array(8).fill(0).map((_, d) => Math.sin(t.charCodeAt(0) * 0.3 + d * 1.5) * 0.7));
       return (
         <div className="space-y-5">
-          <p className="text-gray-700 dark:text-gray-300">Transformers process all tokens at once — they have <b>no built-in sense of order</b>. Positional encoding adds unique position signatures using sine and cosine waves.</p>
-          <div className="flex gap-3 items-end flex-wrap">{['pos 0', 'pos 1', 'pos 2', 'pos 3', 'pos 4', 'pos 5'].map((l, i) =>
+          <p className="text-gray-700 dark:text-gray-300">Each token ID is used to look up a <b>512-dimensional vector</b> from an embedding table. This vector captures the semantic meaning of the word.</p>
+          <div className="flex gap-2 flex-wrap items-end">{tokens.map((t, i) => <TokenPill key={i} word={t} idx={i} delay={i} sub={`→ 512-dim vector`} />)}</div>
+          {tokens.map((t, i) => <EmbeddingBar key={i} values={embs[i]} label={`"${t}" → [showing 8 of 512 dims]`} color={['#22c55e','#3b82f6','#f59e0b'][i]} delay={i * 0.15} />)}
+          <MathBlock formula="Embedding Matrix: [50,257 × 512]" label="~25.7 million parameters just for embeddings!" />
+          <InfoBox color="purple" title="🧲 Semantic Space"><p>Similar words like "love" and "like" end up with <b>nearby vectors</b>. "love" and "hate" are far apart. The model learns these positions during training.</p></InfoBox>
+        </div>
+      );
+    })()},
+    { id:'tf-4', title:'Positional Encoding', description:'Telling the model about word order using waves', icon:'🌊', content: (() => {
+      const pe = Array.from({length: 5}).map((_, pos) => Array(8).fill(0).map((_, i) => i % 2 === 0 ? Math.sin(pos / Math.pow(10000, i / 512)) : Math.cos(pos / Math.pow(10000, (i - 1) / 512))));
+      return (
+        <div className="space-y-5">
+          <p className="text-gray-700 dark:text-gray-300">Transformers process all tokens <b>simultaneously</b> — they have NO built-in sense of "1st word, 2nd word." We add <b>positional encoding</b> using sine and cosine waves so each position gets a unique signature.</p>
+          <div className="flex gap-3 items-end flex-wrap">{['pos 0','pos 1','pos 2','pos 3','pos 4'].map((l, i) =>
             <EmbeddingBar key={i} values={pe[i]} label={l} color="#06b6d4" delay={i * 0.1} height={35} />
           )}</div>
-          <MathBlock formula="PE(pos, 2i) = sin(pos / 10000^(2i/d_model))" label="Even dimensions: sine wave" />
-          <MathBlock formula="PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))" label="Odd dimensions: cosine wave" />
-          <InfoBox color="blue" title="🌊 Why Waves?"><p>Each position gets a <b>unique fingerprint</b>. Nearby positions have similar patterns. Different dimensions use different frequencies — the model can learn to compute relative distances from these patterns.</p></InfoBox>
-          <FlowDiagram steps={[{label:'Token Embedding',color:'bg-green-500'},{label:'+',color:'bg-gray-400'},{label:'Positional Encoding',color:'bg-cyan-500'},{label:'=',color:'bg-gray-400'},{label:'Final Input',color:'bg-blue-500'}]} />
+          <MathBlock formula="PE(pos, 2i) = sin(pos / 10000^(2i/512))" label="Even dimensions: sine wave" />
+          <MathBlock formula="PE(pos, 2i+1) = cos(pos / 10000^(2i/512))" label="Odd dimensions: cosine wave" />
+          <InfoBox color="blue" title="Why Waves?"><p>Each position gets a <b>unique fingerprint</b>. Nearby positions have similar patterns. The model can learn to compute relative distances from these patterns. Final input = Token Embedding + Positional Encoding.</p></InfoBox>
+          <FlowDiagram steps={[{label:'Token Emb [512]',color:'bg-green-500'},{label:'+',color:'bg-gray-400'},{label:'Pos Enc [512]',color:'bg-cyan-500'},{label:'=',color:'bg-gray-400'},{label:'Final Input [512]',color:'bg-yellow-500'}]} />
         </div>
       );
     })()},
-    { id:'tf-4', title:'Queries & Keys', description:'"What am I looking for?" meets "What do I contain?"', icon:'🔑', content: (() => {
+    { id:'tf-5', title:'Self-Attention: Q, K, V', description:'The heart of the Transformer — Query, Key, Value', icon:'🔑', content: (() => {
       const emb = [0.8, -0.3, 0.5, 0.1, -0.6, 0.4];
       const q = emb.map((v, i) => v * 0.7 + Math.sin(i) * 0.3);
       const k = emb.map((v, i) => v * 0.5 - Math.cos(i) * 0.4);
-      const v = emb.map((v, i) => v * 0.6 + Math.sin(i * 2) * 0.2);
+      const val = emb.map((v, i) => v * 0.6 + Math.sin(i * 2) * 0.2);
       return (
         <div className="space-y-5">
-          <p className="text-gray-700 dark:text-gray-300">Each token's embedding is projected into three vectors via learned weight matrices. Think of <b>Queries</b> as questions a token asks, and <b>Keys</b> as what each token advertises about itself.</p>
-          <QKVProjection embedding={emb} query={q} keyVec={k} value={v} token="creature" />
-          <InfoBox color="yellow" title="🎯 3B1B Example"><p>Imagine each <b>noun</b> asks: "Are there any adjectives in front of me?" — this question is encoded as the <b>Query</b>. Each adjective advertises "I'm an adjective!" via its <b>Key</b>. When Query and Key align → high attention score.</p></InfoBox>
-          <MathBlock formula="Q = E · W_Q    K = E · W_K    V = E · W_V" label="Three separate weight matrices, all learned during training" />
+          <p className="text-gray-700 dark:text-gray-300">Each token's embedding is projected into THREE vectors using learned weight matrices. Think of it like a library:</p>
+          <div className="flex gap-3 flex-wrap justify-center my-4">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 text-center w-44"><p className="font-bold text-red-600">🔴 Query (Q)</p><p className="text-xs text-gray-600 dark:text-gray-400">"What am I <b>searching</b> for?"</p><p className="text-xs text-gray-500 mt-1">Like your search term</p></div>
+            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 text-center w-44"><p className="font-bold text-green-600">🟢 Key (K)</p><p className="text-xs text-gray-600 dark:text-gray-400">"What do I <b>contain</b>?"</p><p className="text-xs text-gray-500 mt-1">Like a book's title</p></div>
+            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 text-center w-44"><p className="font-bold text-blue-600">🔵 Value (V)</p><p className="text-xs text-gray-600 dark:text-gray-400">"What info do I <b>provide</b>?"</p><p className="text-xs text-gray-500 mt-1">Like a book's content</p></div>
+          </div>
+          <QKVProjection embedding={emb} query={q} keyVec={k} value={val} token="India" />
+          <MathBlock formula="Q = E × W_Q [512×64]  ·  K = E × W_K [512×64]  ·  V = E × W_V [512×64]" label="Three weight matrices, all learned during training" />
         </div>
       );
     })()},
-    { id:'tf-5', title:'The Attention Pattern', description:'Dot products, scaling, and softmax', icon:'📊', content: (() => {
-      const tokens = ['A', 'fluffy', 'blue', 'creature', 'roamed'];
-      const scores = tokens.map((_, i) => tokens.map((_, j) => {
-        if (i === 3 && (j === 1 || j === 2)) return 2.5 + Math.random() * 0.5;
-        if (i === j) return 1.0 + Math.random() * 0.3;
-        return -0.5 + Math.random() * 0.5;
-      }));
+    { id:'tf-6', title:'Scaled Dot-Product Attention', description:'How tokens decide what to pay attention to', icon:'📊', content: (() => {
+      const tokens = ['I', 'love', 'India'];
+      const scores = tokens.map((_, i) => tokens.map((_, j) => { if (i === 1 && j === 2) return 2.8; if (i === 2 && j === 1) return 2.5; if (i === j) return 1.2; return -0.3 + Math.random() * 0.4; }));
       const softmax = (row: number[]) => { const mx = Math.max(...row); const e = row.map(v => Math.exp(v - mx)); const s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); };
       const attn = scores.map(softmax);
       return (
         <div className="space-y-5">
-          <p className="text-gray-700 dark:text-gray-300">After computing Q and K for every token, we calculate <b>how much each token should attend to every other</b> via dot products.</p>
+          <p className="text-gray-700 dark:text-gray-300">Now we compute: <b>how much should each token attend to every other token?</b></p>
+          <p className="text-gray-700 dark:text-gray-300 text-sm"><b>Step 1:</b> Dot product of each Query with every Key → raw compatibility scores.</p>
           <DotGrid tokens={tokens} scores={scores} delay={0.2} />
-          <p className="text-gray-700 dark:text-gray-300 text-sm">Larger dots = higher compatibility. "creature" (Query) strongly matches "fluffy" and "blue" (Keys). Now we scale by √d_k and apply softmax:</p>
-          <SoftmaxAnim input={scores[3]} output={attn[3]} tokens={tokens} colIdx={3} delay={0.3} />
-          <p className="text-gray-700 dark:text-gray-300 text-sm">After softmax, "creature" attends 42% to "fluffy", 38% to "blue", and only 7% to "A":</p>
-          <AttentionArrows tokens={tokens} weights={attn[3]} targetIdx={3} width={400} height={70} />
-          <MathBlock formula="Attention(Q,K,V) = softmax(Q · Kᵀ / √d_k) · V" label="The famous attention formula from 'Attention Is All You Need'" />
+          <p className="text-gray-700 dark:text-gray-300 text-sm"><b>Step 2:</b> Divide by √d_k = √64 = 8 (prevents scores from getting too large).</p>
+          <p className="text-gray-700 dark:text-gray-300 text-sm"><b>Step 3:</b> Apply softmax to make each row sum to 100%.</p>
+          <SoftmaxAnim input={scores[1]} output={attn[1]} tokens={tokens} colIdx={1} delay={0.3} />
+          <p className="text-gray-700 dark:text-gray-300 text-sm"><b>Result:</b> "love" attends 65% to "India" and 25% to "I":</p>
+          <AttentionArrows tokens={tokens} weights={attn[1]} targetIdx={1} width={300} height={60} />
+          <MathBlock formula="Attention(Q,K,V) = softmax(Q · Kᵀ / √d_k) · V" label="The famous formula from 'Attention Is All You Need' (2017)" />
         </div>
       );
     })()},
-    { id:'tf-6', title:'Values & Output', description:'Weighted combination produces context-aware embeddings', icon:'✨', content: (() => {
-      const tokens = ['A', 'fluffy', 'blue', 'creature', 'roamed'];
-      const attnWeights = [0.07, 0.42, 0.38, 0.08, 0.05];
+    { id:'tf-7', title:'Values & Weighted Output', description:'How attention produces context-aware embeddings', icon:'✨', content: (() => {
+      const tokens = ['I', 'love', 'India'];
+      const attnWeights = [0.10, 0.25, 0.65];
       const values = tokens.map((t, i) => Array(6).fill(0).map((_, d) => Math.sin(t.charCodeAt(0) * 0.2 + d * 1.3 + i) * 0.6));
       return (
         <div className="space-y-5">
-          <p className="text-gray-700 dark:text-gray-300">The <b>Value</b> vectors carry the actual information. The attention weights tell us <b>how much of each Value to mix</b>:</p>
-          <ValueWeightedSum tokens={tokens} attnWeights={attnWeights} values={values} targetIdx={3} />
-          <p className="text-gray-700 dark:text-gray-300 text-sm">The output for "creature" is now a <b>weighted blend</b>: mostly "fluffy" and "blue" information, with a little from others. The embedding has been updated with context!</p>
-          <InfoBox color="purple" title="🎬 3B1B Analogy"><p>Think of attention as a <b>spotlight</b>: each token shines attention on the tokens that matter most to it, then absorbs their information proportionally. "creature" spotlights "fluffy" (42%) and "blue" (38%).</p></InfoBox>
-          <FlowDiagram steps={[{label:'Embedding',color:'bg-gray-500'},{label:'+ Σ(attn × V)',color:'bg-purple-500'},{label:'= Context-aware',color:'bg-green-500'}]} />
+          <p className="text-gray-700 dark:text-gray-300">Now comes the magic: the attention weights tell us <b>how much of each Value to mix</b> into the output for "love":</p>
+          <ValueWeightedSum tokens={tokens} attnWeights={attnWeights} values={values} targetIdx={1} />
+          <InfoBox color="purple" title="🎬 Think of it like mixing paint"><p>"love" gets 65% of India's color, 25% of I's color, and 10% of its own → a brand new, <b>context-aware</b> color that encodes "love [of India]" instead of generic "love."</p></InfoBox>
+          <FlowDiagram steps={[{label:'Generic "love" [512]',color:'bg-gray-500'},{label:'+ 65% V(India)',color:'bg-yellow-500'},{label:'+ 25% V(I)',color:'bg-blue-500'},{label:'= "love India" [512]',color:'bg-green-500'}]} />
+          <p className="text-gray-700 dark:text-gray-300 text-sm">This happens for EVERY token simultaneously. After this step, every token's vector has been enriched with relevant context from all other tokens.</p>
         </div>
       );
     })()},
-    { id:'tf-7', title:'Multi-Head Attention', description:'Multiple perspectives looking at the same data', icon:'👁️', content: (() => {
-      const tokens = ['The', 'glass', 'ball', 'shattered'];
+    { id:'tf-8', title:'Masked Self-Attention', description:'How the decoder prevents cheating — the causal mask', icon:'🎭', content: (() => {
+      const tokens = ['मुझे', 'भारत', 'पसंद', 'है'];
       return (
         <div className="space-y-5">
-          <p className="text-gray-700 dark:text-gray-300">A single attention head can only learn <b>one type of pattern</b>. Multi-head attention runs several heads in parallel, each with its own W_Q, W_K, W_V:</p>
-          <MultiHeadSplit tokens={tokens} numHeads={4} delay={0.2} />
-          <p className="text-gray-700 dark:text-gray-300 text-sm">One head might learn syntax (subject-verb), another semantics (glass → fragile), another positional proximity, another tracks coreference (it → ball).</p>
-          <MathBlock formula="MultiHead = Concat(head₁, head₂, ..., headₙ) × W_O" label="Outputs concatenated and projected back to d_model" />
-          <InfoBox color="yellow" title="🔢 Scale"><p>GPT-2 (small): <b>12 heads</b> per layer × <b>12 layers</b> = 144 attention heads total. GPT-3: 96 heads × 96 layers. Each head sees the data from a different angle.</p></InfoBox>
+          <p className="text-gray-700 dark:text-gray-300">In the <b>decoder</b>, there's a crucial difference: when predicting "पसंद", the model should only see "मुझे" and "भारत" — <b>NOT "है"</b> (which comes after). This is enforced with a <b>causal mask</b>:</p>
+          <MaskGridAnim tokens={tokens} />
+          <InfoBox color="yellow" title="Why Mask?"><p>During training, the decoder sees the entire target sentence. Without masking, it could "cheat" by looking at future words. The mask sets future positions to -∞ before softmax, making them 0%.</p></InfoBox>
+          <p className="text-gray-700 dark:text-gray-300 text-sm">The result is a <b>triangular attention pattern</b>: token 1 sees only itself, token 2 sees tokens 1-2, token 3 sees tokens 1-3, etc.</p>
+          <MathBlock formula="score[i][j] = -∞ if j > i (future token)" label="Masked positions become 0% after softmax" />
         </div>
       );
     })()},
-    { id:'tf-8', title:'The Transformer Block', description:'Attention + FFN + Residuals = one complete processing step', icon:'🏗️', content: (
-      <div className="space-y-5">
-        <p className="text-gray-700 dark:text-gray-300">A complete Transformer block combines multi-head attention with a feed-forward network, connected by <b>residual connections</b> and <b>layer normalization</b>:</p>
-        <TransformerBlockAnim delay={0.2} />
-        <div className="flex gap-4 flex-wrap justify-center mt-4">
-          <InfoBox color="blue" title="➕ Residual Connection"><p><b>output = layer(x) + x</b>. The original input is added back. This lets gradients flow directly and enables 100+ layer networks.</p></InfoBox>
-          <InfoBox color="purple" title="📏 Layer Normalization"><p>Normalizes values across each position's features. Stabilizes training and speeds up convergence.</p></InfoBox>
-          <InfoBox color="orange" title="🧮 Feed-Forward Network"><p>Two linear layers with activation: <b>d → 4d → d</b>. Applied per-token independently. Adds non-linear transformation capacity.</p></InfoBox>
+    { id:'tf-9', title:'Cross-Attention', description:'Where translation actually happens — decoder reads encoder', icon:'🌉', content: (() => {
+      const encT = ['I', 'love', 'India'];
+      const decT = ['मुझे', 'भारत', 'पसंद', 'है'];
+      const conns = [{from:'I',pct:72},{from:'India',pct:68},{from:'love',pct:75},{from:'love',pct:45}];
+      return (
+        <div className="space-y-5">
+          <p className="text-gray-700 dark:text-gray-300"><b>THIS is where translation happens!</b> In cross-attention, the decoder tokens send <b>Queries</b>, but the <b>Keys and Values come from the encoder</b>:</p>
+          <div className="flex gap-3 flex-wrap justify-center my-4">
+            <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-700 text-center w-52"><p className="font-bold text-purple-600">Queries from DECODER</p><p className="text-xs text-gray-600 dark:text-gray-400">Hindi tokens ask: "Which English word am I translating?"</p></div>
+            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 text-center w-52"><p className="font-bold text-green-600">Keys + Values from ENCODER</p><p className="text-xs text-gray-600 dark:text-gray-400">English tokens answer: "Here's my meaning"</p></div>
+          </div>
+          <CrossAttentionFlow encTokens={encT} decTokens={decT} connections={conns} />
+          <InfoBox color="pink" title="🔑 Key Difference"><p><b>Self-attention:</b> Q, K, V all come from same tokens. <b>Cross-attention:</b> Q from decoder, K+V from encoder. The heatmap is RECTANGULAR [4×3], not square!</p></InfoBox>
         </div>
-        <MathBlock formula="GPT-2: 12 blocks stacked · GPT-3: 96 blocks · Each refines the embeddings further" label="Stacking blocks = deeper understanding" />
-        <InfoBox color="green" title="🏁 Final Step"><p>After all blocks, only the <b>last token's vector</b> is used to predict the next word. It must encode all relevant context — and thanks to attention, it can!</p></InfoBox>
+      );
+    })()},
+    { id:'tf-10', title:'Multi-Head Attention', description:'8 heads looking at data from 8 different angles', icon:'👁️', content: (() => {
+      const tokens = ['I', 'love', 'India'];
+      return (
+        <div className="space-y-5">
+          <p className="text-gray-700 dark:text-gray-300">One attention head can only learn <b>one type of pattern</b>. Multi-head runs <b>8 heads in parallel</b>, each with its own W_Q, W_K, W_V:</p>
+          <MultiHeadSplit tokens={tokens} numHeads={8} delay={0.2} />
+          <MathBlock formula="d_model=512, heads=8, d_k=512/8=64 per head" label="Each head works in a 64-dimensional subspace" />
+          <p className="text-gray-700 dark:text-gray-300 text-sm">After all 8 heads compute their outputs, we <b>concatenate</b> them [8×64=512] and multiply by W_O [512×512] to get back to the original dimension.</p>
+          <MathBlock formula="MultiHead = Concat(head₁...head₈) × W_O" label="Total MHA parameters: 4 × 512 × 64 × 8 = 1,048,576" />
+          <FlowDiagram steps={[{label:'Input [512]',color:'bg-gray-500'},{label:'Split → 8 heads',color:'bg-yellow-500'},{label:'Each: Q,K,V [64]',color:'bg-blue-500'},{label:'Concat [512]',color:'bg-purple-500'},{label:'× W_O [512]',color:'bg-green-500'}]} />
+        </div>
+      );
+    })()},
+    { id:'tf-11', title:'Feed-Forward & Residuals', description:'The other half of each Transformer block', icon:'🧮', content: (
+      <div className="space-y-5">
+        <p className="text-gray-700 dark:text-gray-300">After attention, each token passes through a <b>Feed-Forward Network</b> independently. Plus, <b>residual connections</b> and <b>layer normalization</b> surround every sublayer.</p>
+        <InfoBox color="blue" title="🧮 Feed-Forward Network"><p>A simple 2-layer neural net applied to each token separately:<br/><b>FFN(x) = ReLU(x·W₁ + b₁)·W₂ + b₂</b><br/>Layer 1: [512 → 2048] with ReLU. Layer 2: [2048 → 512].<br/>Parameters: 512×2048 + 2048×512 = <b>2,097,152</b></p></InfoBox>
+        <InfoBox color="green" title="➕ Residual Connection"><p><b>output = sublayer(x) + x</b><br/>The original input bypasses the sublayer like a highway. Even if the sublayer learns nothing useful, the gradient flows through. This enables training 100+ layer networks!</p></InfoBox>
+        <InfoBox color="purple" title="📏 Layer Normalization"><p>For each token, normalize its 512 values to mean=0, std=1. Applied AFTER the residual add. Stabilizes training dramatically.</p></InfoBox>
+        <MathBlock formula="LayerNorm(x + Sublayer(x))" label="This pattern repeats for every sublayer in the Transformer" />
+        <FlowDiagram steps={[{label:'x',color:'bg-gray-500'},{label:'Sublayer(x)',color:'bg-blue-500'},{label:'+ x (residual)',color:'bg-green-500'},{label:'LayerNorm',color:'bg-purple-500'},{label:'output',color:'bg-yellow-500'}]} />
       </div>
     )},
+    { id:'tf-12', title:'Full Encoder-Decoder', description:'How all the pieces fit together for translation', icon:'🏗️', content: (
+      <div className="space-y-5">
+        <p className="text-gray-700 dark:text-gray-300">The complete Transformer has an <b>Encoder</b> (left) and a <b>Decoder</b> (right), each stacked N=6 times:</p>
+        <TransformerBlockAnim delay={0.2} />
+        <div className="flex gap-4 flex-wrap justify-center mt-4">
+          <InfoBox color="blue" title="🔵 Encoder (×6)"><p><b>Self-Attention</b> → Add&Norm → <b>FFN</b> → Add&Norm<br/>Processes ALL source tokens at once. Output: context-rich source embeddings.</p></InfoBox>
+          <InfoBox color="purple" title="🟣 Decoder (×6)"><p><b>Masked Self-Attn</b> → Add&Norm → <b>Cross-Attn</b> → Add&Norm → <b>FFN</b> → Add&Norm<br/>Generates one token at a time using encoder output.</p></InfoBox>
+        </div>
+        <MathBlock formula="Encoder output → Decoder's Cross-Attention (K, V) → Linear [512→vocab] → Softmax → predicted word" label="The full translation pipeline" />
+        <InfoBox color="green" title="📊 Total Parameters"><p>Embeddings: ~25M · Encoder: 6×(MHA+FFN) ≈ 19M · Decoder: 6×(MMHA+CrossMHA+FFN) ≈ 25M · Linear: ~25M · <b>Total ≈ 65 million parameters</b></p></InfoBox>
+      </div>
+    )},
+    { id:'tf-13', title:'Transformer in Memory', description:'3D view: how the trained model lives in GPU memory + inference', icon:'🧊', content: (() => {
+      const layers = [
+        { label: 'Token Embedding [50257×512]', color: '#22c55e', desc: 'Lookup table: every word → 512-dim vector', shape: '[50257×512]', params: '25.7M params', w: 200, h: 28 },
+        { label: 'Positional Encoding [512×512]', color: '#06b6d4', desc: 'Sine/cosine waves for 512 positions', shape: '[512×512]', params: '262K (fixed, not learned)', w: 190, h: 24 },
+        { label: 'Encoder Block 1: W_Q,W_K,W_V,W_O', color: '#3b82f6', desc: 'Self-attention weights for encoder layer 1', shape: '4×[512×512]', params: '1.05M', w: 220, h: 26 },
+        { label: 'Encoder Block 1: FFN W1,W2', color: '#60a5fa', desc: 'Feed-forward: [512→2048→512]', shape: '[512×2048]+[2048×512]', params: '2.1M', w: 210, h: 24 },
+        { label: 'Encoder Block 2', color: '#3b82f6', desc: 'Same structure, different learned weights', shape: '4×[512×512]+FFN', params: '3.15M', w: 200, h: 24 },
+        { label: '... Encoder Blocks 3-6', color: '#2563eb', desc: '4 more identical blocks stacked', shape: '×4 blocks', params: '12.6M', w: 180, h: 22 },
+        { label: 'Decoder Block 1: Masked MHA', color: '#a855f7', desc: 'Masked self-attention weights', shape: '4×[512×512]', params: '1.05M', w: 210, h: 26 },
+        { label: 'Decoder Block 1: Cross MHA', color: '#ec4899', desc: 'Cross-attention: decoder→encoder', shape: '4×[512×512]', params: '1.05M', w: 210, h: 24 },
+        { label: 'Decoder Block 1: FFN', color: '#f472b6', desc: 'Feed-forward network', shape: '[512×2048]+[2048×512]', params: '2.1M', w: 200, h: 24 },
+        { label: '... Decoder Blocks 2-6', color: '#7c3aed', desc: '5 more decoder blocks', shape: '×5 blocks', params: '21M', w: 180, h: 22 },
+        { label: 'Linear [512→50257]', color: '#c4b5fd', desc: 'Projects to vocabulary size for prediction', shape: '[512×50257]', params: '25.7M', w: 200, h: 26 },
+        { label: 'Softmax', color: '#86efac', desc: 'No parameters — just math (exp/sum)', shape: 'function', params: '0 params', w: 160, h: 22 },
+      ];
+      return (
+        <div className="space-y-5">
+          <p className="text-gray-700 dark:text-gray-300">Every weight matrix is stored as a giant array of floating-point numbers in <b>GPU memory</b>. Here's what the trained model looks like — hover over each layer:</p>
+          <MemoryCube3D layers={layers} />
+          <InfoBox color="yellow" title="💾 Memory Size"><p>Total: ~65M parameters × 4 bytes (float32) = <b>~260 MB</b> on GPU. With float16: ~130 MB. GPT-3 (175B params): ~700 GB!</p></InfoBox>
+          <p className="text-gray-700 dark:text-gray-300 font-bold">How Inference Works (English→Hindi):</p>
+          <InferencePipeline srcTokens={['I','love','India']} tgtTokens={['मुझे','भारत','पसंद','है']} />
+          <InfoBox color="green" title="🔁 Autoregressive Decoding"><p>The decoder generates ONE token at a time. Each new token is fed back as input for the next step. "मुझे" → "भारत" → "पसंद" → "है" → [END]. The encoder runs ONCE, but the decoder runs T times (one per output token).</p></InfoBox>
+        </div>
+      );
+    })()},
   ],
 };
 
