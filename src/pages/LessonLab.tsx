@@ -514,46 +514,90 @@ function SelfAttentionLab() {
   const tokens = sentence.toLowerCase().split(/\s+/).filter(t => t);
   const n = tokens.length;
   const dk = 4;
-  const scores: number[][] = tokens.map((_, i) => tokens.map((_, j) => Math.sin(i * 3.7 + j * 2.1) * 0.5 + (i === j ? 1 : 0)));
-  const scaled = scores.map(row => row.map(v => v / Math.sqrt(dk)));
-  const attnWeights = scaled.map(row => { const mx = Math.max(...row); const e = row.map(v => Math.exp(v - mx)); const s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); });
-  const [selTok, setSelTok] = useState(1);
-  const [showStep, setShowStep] = useState<'qkv'|'scores'|'softmax'>('softmax');
+  const dModel = 6;
 
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const c = ref.current; if (!c) return;
-    const size = 220; c.width = size; c.height = size;
-    const ctx = c.getContext('2d')!;
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, size, size);
-    const data = showStep === 'scores' ? scaled : attnWeights;
-    const off = 40, cs = (size - off) / n;
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-      const v = data[i]?.[j] || 0; const av = showStep === 'scores' ? (v + 2) / 4 : v;
-      ctx.fillStyle = `rgba(59,130,246,${Math.max(0, av) * 0.9 + 0.05})`;
-      ctx.fillRect(off + j * cs, off + i * cs, cs - 1, cs - 1);
-      if (n <= 8) { ctx.fillStyle = av > 0.3 ? '#fff' : '#64748b'; ctx.font = `bold ${Math.min(10, cs * 0.35)}px monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(v.toFixed(2), off + j * cs + cs / 2, off + i * cs + cs / 2); }
-    }
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    for (let i = 0; i < n; i++) ctx.fillText(tokens[i].slice(0, 5), off - 3, off + i * cs + cs / 2);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    for (let j = 0; j < n; j++) { ctx.save(); ctx.translate(off + j * cs + cs / 2, off - 3); ctx.rotate(-0.4); ctx.fillText(tokens[j].slice(0, 5), 0, 0); ctx.restore(); }
-  }, [attnWeights, scaled, n, showStep, tokens]);
+  // Generate deterministic embeddings, Q, K, V
+  const embeddings = tokens.map((t, i) => Array(dModel).fill(0).map((_, d) => +(Math.sin(t.charCodeAt(0) * 0.3 + d * 1.5 + i * 0.7) * 0.7).toFixed(2)));
+  const queries = embeddings.map(e => e.slice(0, dk).map((v, d) => +(v * 0.8 + Math.cos(d) * 0.2).toFixed(2)));
+  const keys = embeddings.map(e => e.slice(0, dk).map((v, d) => +(v * 0.6 - Math.sin(d) * 0.3).toFixed(2)));
+  const values = embeddings.map(e => e.slice(0, dk).map((v, d) => +(v * 0.5 + Math.sin(d * 2) * 0.4).toFixed(2)));
+
+  const scores: number[][] = queries.map(q => keys.map(k => q.reduce((s, v, i) => s + v * (k[i] || 0), 0)));
+  const scaled = scores.map(row => row.map(v => v / Math.sqrt(dk)));
+  const softmaxRow = (row: number[]) => { if (!row.length) return []; const mx = Math.max(...row); const e = row.map(v => Math.exp(v - mx)); const s = e.reduce((a, b) => a + b, 0); return e.map(v => v / (s || 1)); };
+  const attnWeights = scaled.map(softmaxRow);
+
+  const [selTok, setSelTok] = useState(0);
+  const safeSelTok = Math.min(selTok, n - 1);
+  const [step, setStep] = useState(0); // 0=embed, 1=QKV, 2=scores, 3=softmax
 
   return (
     <div className="space-y-4">
-      <input value={sentence} onChange={e => setSentence(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600" placeholder="Enter a sentence..." />
-      <div className="flex gap-2">{(['qkv','scores','softmax'] as const).map(s => <button key={s} onClick={() => setShowStep(s)} className={`px-3 py-1 rounded text-xs font-bold ${showStep === s ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{s === 'qkv' ? '🔑 Q·Kᵀ' : s === 'scores' ? '📊 Scaled Scores' : '🎯 Softmax Weights'}</button>)}</div>
-      <div className="flex gap-6 items-start flex-wrap">
-        <canvas ref={ref} style={{ width: 220, height: 220, borderRadius: 8, border: '1px solid #334155' }} />
-        <div>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Token attention distribution:</p>
-          <div className="flex gap-2 mb-3 flex-wrap">{tokens.map((t, i) => <button key={i} onClick={() => setSelTok(i)} className={`px-2 py-1 rounded text-xs font-bold ${i === selTok ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{t}</button>)}</div>
-          {tokens.map((t, j) => (
-            <div key={j} className="flex items-center gap-2 mb-1"><span className="text-xs text-gray-600 dark:text-gray-500 w-12 text-right font-mono">{t}</span><div className="flex-1 h-4 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 140 }}><div className="h-full bg-blue-500 rounded" style={{ width: `${attnWeights[selTok]?.[j] * 100 || 0}%` }} /></div><span className="text-xs text-gray-600 dark:text-gray-400 font-mono w-10">{((attnWeights[selTok]?.[j] || 0) * 100).toFixed(0)}%</span></div>
+      <input value={sentence} onChange={e => { setSentence(e.target.value); setSelTok(0); }} className="w-full px-3 py-2 rounded-lg text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600" placeholder="Enter a sentence..." />
+
+      {/* Step selector */}
+      <div className="flex gap-1 flex-wrap">{['1. Embeddings', '2. Q, K, V', '3. Scores Q·Kᵀ', '4. Softmax'].map((label, i) => (
+        <button key={i} onClick={() => setStep(i)} className={`px-3 py-1.5 rounded text-xs font-bold ${step === i ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{label}</button>
+      ))}</div>
+
+      {n === 0 && <p className="text-sm text-gray-500">Type a sentence above to begin.</p>}
+
+      {n > 0 && step === 0 && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg space-y-2">
+          <p className="text-xs font-bold text-green-500 mb-2">Token Embeddings [{n} × {dModel}]</p>
+          {tokens.map((t, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-xs font-mono w-12 text-right text-green-600 font-bold">{t}</span>
+              <div className="flex gap-1">{embeddings[i].map((v, d) => <div key={d} className="w-10 h-5 rounded text-center flex items-center justify-center" style={{ fontSize: 7, fontFamily: 'monospace', fontWeight: 700, color: '#fff', background: `rgba(34,197,94,${Math.abs(v) * 0.8 + 0.1})` }}>{v}</div>)}</div>
+            </div>
           ))}
         </div>
-      </div>
+      )}
+
+      {n > 0 && step === 1 && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg space-y-3">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Each embedding is projected into <b className="text-gray-900 dark:text-white">Query</b>, <b className="text-gray-900 dark:text-white">Key</b>, <b className="text-gray-900 dark:text-white">Value</b> via learned weight matrices:</p>
+          {tokens.map((t, i) => (
+            <div key={i} className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-mono w-10 text-right text-gray-500 font-bold">{t}</span>
+              <span className="text-xs text-gray-400">→</span>
+              <div className="flex gap-0.5">{queries[i].map((v, d) => <div key={d} className="w-8 h-5 rounded text-center flex items-center justify-center" style={{ fontSize: 6, fontFamily: 'monospace', fontWeight: 700, color: '#fff', background: `rgba(239,68,68,${Math.abs(v) + 0.15})` }}>{v}</div>)}</div>
+              <div className="flex gap-0.5">{keys[i].map((v, d) => <div key={d} className="w-8 h-5 rounded text-center flex items-center justify-center" style={{ fontSize: 6, fontFamily: 'monospace', fontWeight: 700, color: '#fff', background: `rgba(34,197,94,${Math.abs(v) + 0.15})` }}>{v}</div>)}</div>
+              <div className="flex gap-0.5">{values[i].map((v, d) => <div key={d} className="w-8 h-5 rounded text-center flex items-center justify-center" style={{ fontSize: 6, fontFamily: 'monospace', fontWeight: 700, color: '#fff', background: `rgba(59,130,246,${Math.abs(v) + 0.15})` }}>{v}</div>)}</div>
+            </div>
+          ))}
+          <div className="flex gap-4 mt-2">{[{l:'Q (Query)',c:'#ef4444'},{l:'K (Key)',c:'#22c55e'},{l:'V (Value)',c:'#3b82f6'}].map(x => <span key={x.l} className="text-xs font-bold" style={{color:x.c}}>{x.l}</span>)}</div>
+        </div>
+      )}
+
+      {n > 0 && step === 2 && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <p className="text-xs font-bold text-purple-500 mb-2">Scores = Q · Kᵀ / √{dk} [{n}×{n}]</p>
+          <div className="overflow-x-auto">
+            <div className="inline-grid gap-1" style={{ gridTemplateColumns: `50px repeat(${n}, 44px)` }}>
+              <div />{tokens.map((t, j) => <div key={j} className="text-center text-xs font-bold text-blue-500 truncate">{t}</div>)}
+              {tokens.map((t, i) => (<React.Fragment key={i}><div className="text-xs font-bold text-blue-500 text-right pr-1 self-center">{t}</div>{scaled[i]?.map((v, j) => <div key={j} className="h-8 rounded flex items-center justify-center text-xs font-mono font-bold" style={{ background: `rgba(168,85,247,${Math.max(0,(v+1)/3)*0.7+0.05})`, color: '#fff' }}>{v.toFixed(2)}</div>)}</React.Fragment>))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {n > 0 && step === 3 && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg space-y-3">
+          <p className="text-xs font-bold text-purple-500 mb-2">Attention Weights (softmax per row)</p>
+          <div className="flex gap-2 mb-2 flex-wrap">{tokens.map((t, i) => <button key={i} onClick={() => setSelTok(i)} className={`px-2 py-1 rounded text-xs font-bold ${i === safeSelTok ? 'bg-purple-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{t}</button>)}</div>
+          <p className="text-xs text-gray-600 dark:text-gray-400">"{tokens[safeSelTok]}" attends to:</p>
+          {tokens.map((t, j) => (
+            <div key={j} className="flex items-center gap-2 mb-1">
+              <span className="text-xs w-12 text-right font-mono text-gray-500">{t}</span>
+              <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 180 }}>
+                <div className="h-full bg-purple-500 rounded" style={{ width: `${(attnWeights[safeSelTok]?.[j] || 0) * 100}%` }} />
+              </div>
+              <span className="text-xs w-10 font-mono text-gray-600 dark:text-gray-400">{((attnWeights[safeSelTok]?.[j] || 0) * 100).toFixed(0)}%</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
