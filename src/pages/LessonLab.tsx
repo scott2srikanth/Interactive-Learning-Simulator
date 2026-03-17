@@ -792,47 +792,184 @@ function MultiHeadLab() {
 }
 
 // tf-6: Full Transformer Block
-function TransformerBlockLab() {
-  const tokens = ['The', 'cat', 'sat'];
+// tf-11: Feed-Forward Network & Residuals — focused on FFN internals
+function FFNResidualLab() {
+  const tokens = ['I', 'love', 'India'];
   const dModel = 4;
-  const [curStage, setCurStage] = useState(0);
-  const stages = ['Input+PE', 'Multi-Head Attn', 'Add & Norm', 'Feed-Forward', 'Add & Norm', 'Output'];
-  // Simulate values at each stage
-  const vals = tokens.map((_, i) => Array(dModel).fill(0).map((_, d) => Math.sin(i * 2.3 + d * 1.7) * 0.5));
-  const stageVals = stages.map((_, s) => tokens.map((_, i) => Array(dModel).fill(0).map((_, d) => Math.sin(i * 2.3 + d * 1.7 + s * 0.8) * (0.5 + s * 0.1))));
-  const stageColors = ['#22c55e', '#f59e0b', '#64748b', '#ec4899', '#64748b', '#22c55e'];
+  const [stage, setStage] = useState(0);
+  const stages = [
+    { label: 'Input x', color: '#22c55e', desc: 'Token embeddings from attention output [3×512]' },
+    { label: 'x · W₁ + b₁', color: '#3b82f6', desc: 'Linear layer 1: expand [512 → 2048]. Multiply by weight matrix.' },
+    { label: 'ReLU', color: '#f59e0b', desc: 'Activation: max(0, x). Negative values become 0. Adds non-linearity.' },
+    { label: 'x · W₂ + b₂', color: '#ec4899', desc: 'Linear layer 2: compress [2048 → 512]. Back to original dimension.' },
+    { label: '+ Residual', color: '#a855f7', desc: 'Add original input: output = FFN(x) + x. This "highway" prevents gradient vanishing.' },
+    { label: 'LayerNorm', color: '#06b6d4', desc: 'Normalize each token to mean=0, std=1. Stabilizes training.' },
+  ];
+  const vals = stages.map((_, s) => tokens.map((_, i) => Array(dModel).fill(0).map((_, d) => {
+    let v = Math.sin(i * 2.3 + d * 1.7) * 0.5;
+    if (s >= 1) v = v * 1.5 + Math.cos(d * 0.9) * 0.3; // expand
+    if (s >= 2) v = Math.max(0, v); // ReLU
+    if (s >= 3) v = v * 0.8 - 0.1; // compress
+    if (s >= 4) v = v + Math.sin(i * 2.3 + d * 1.7) * 0.5; // residual
+    if (s >= 5) { const m = [v, v * 0.9, v * 1.1, v * 0.95].reduce((a, b) => a + b, 0) / 4; v = (v - m) / 0.5; } // norm
+    return +v.toFixed(2);
+  })));
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-gray-600 dark:text-gray-400">Click each stage to see the tensor values flowing through:</p>
+      <p className="text-xs text-gray-600 dark:text-gray-400">Step through the Feed-Forward Network + Residual + LayerNorm:</p>
       <div className="flex gap-1 items-center flex-wrap">
         {stages.map((s, i) => (
           <React.Fragment key={i}>
-            {i > 0 && <span className="text-gray-600 text-xs">→</span>}
-            <button onClick={() => setCurStage(i)} className="px-2 py-1.5 rounded text-xs font-bold transition-all" style={{ background: curStage === i ? stageColors[i] : '#1e293b', color: curStage === i ? (i === 2 || i === 4 ? '#fff' : '#000') : '#64748b', border: `1px solid ${curStage === i ? stageColors[i] : '#334155'}` }}>{s}</button>
+            {i > 0 && <span className="text-gray-400 text-xs">→</span>}
+            <button onClick={() => setStage(i)} className="px-2 py-1.5 rounded text-xs font-bold transition-all"
+              style={{ background: stage === i ? s.color : stage > i ? `${s.color}22` : '', color: stage === i ? '#fff' : stage > i ? s.color : '#64748b', border: `1px solid ${stage === i ? s.color : '#334155'}` }}>{s.label}</button>
           </React.Fragment>
         ))}
       </div>
-      <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg">
-        <p className="text-xs font-bold mb-3" style={{ color: stageColors[curStage] }}>Stage: {stages[curStage]} — tensor [{tokens.length}×{dModel}]</p>
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <p className="text-xs font-bold mb-3" style={{ color: stages[stage].color }}>{stages[stage].label} — [{tokens.length}×{stage === 1 || stage === 2 ? '2048' : '512'}]</p>
         {tokens.map((t, i) => (
           <div key={i} className="flex items-center gap-3 mb-2">
-            <span className="text-xs font-bold text-green-400 w-10 text-right">"{t}"</span>
-            <div className="flex gap-1">
-              {stageVals[curStage][i].map((v, d) => (
-                <div key={d} className="w-12 h-7 rounded flex items-center justify-center text-xs font-mono font-bold" style={{ background: `${stageColors[curStage]}${Math.round(Math.abs(v) * 150 + 40).toString(16).padStart(2, '0')}`, color: '#fff' }}>{v.toFixed(2)}</div>
-              ))}
-            </div>
+            <span className="text-xs font-bold w-10 text-right font-mono" style={{ color: stages[stage].color }}>"{t}"</span>
+            <div className="flex gap-1">{vals[stage][i].map((v, d) => (
+              <div key={d} className="w-12 h-7 rounded flex items-center justify-center text-xs font-mono font-bold"
+                style={{ background: `${stages[stage].color}${Math.round(Math.min(Math.abs(v), 1) * 150 + 40).toString(16).padStart(2, '0')}`, color: '#fff' }}>{v.toFixed(2)}</div>
+            ))}</div>
+            {stage === 2 && <span className="text-xs text-gray-400">{vals[stage][i].filter(v => v === 0).length > 0 ? '← zeros from ReLU' : ''}</span>}
           </div>
         ))}
       </div>
-      <div className="p-3 rounded-lg bg-gray-900 text-xs text-gray-600 dark:text-gray-400">
-        {curStage === 0 && 'Embeddings + Positional Encoding → position-aware token representations.'}
-        {curStage === 1 && 'Multi-Head Self-Attention: every token attends to every other token via Q·Kᵀ/√dₖ softmax.'}
-        {curStage === 2 && 'Residual connection (x + attention(x)) followed by Layer Normalization.'}
-        {curStage === 3 && 'Feed-Forward Network: two linear layers with ReLU. Applied per-position independently.'}
-        {curStage === 4 && 'Second residual connection (x + FFN(x)) followed by Layer Normalization.'}
-        {curStage === 5 && 'Final output: each token now carries context from ALL other tokens. Ready for next block or output.'}
+      <div className="p-3 rounded-lg" style={{ background: `${stages[stage].color}11`, border: `1px solid ${stages[stage].color}33` }}>
+        <p className="text-xs text-gray-700 dark:text-gray-300">{stages[stage].desc}</p>
+      </div>
+      {stage === 4 && <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+        <p className="text-xs text-gray-700 dark:text-gray-300"><b>Why residual?</b> Even if the FFN learns nothing useful (outputs zeros), the original signal passes through unchanged. This lets you stack 100+ layers without gradient vanishing!</p>
+      </div>}
+    </div>
+  );
+}
+
+// tf-12: Full Encoder-Decoder Pipeline — shows BOTH sides with translation
+function FullEncoderDecoderLab() {
+  const enTokens = ['I', 'love', 'India'];
+  const hiTokens = ['मुझे', 'भारत', 'पसंद', 'है'];
+  const [activeBlock, setActiveBlock] = useState<string | null>(null);
+
+  const encStages = [
+    { id: 'enc_emb', label: '📥 Input Embedding + PE', side: 'encoder', color: '#22c55e', desc: `English tokens "${enTokens.join(', ')}" → 512-dim vectors + positional encoding.` },
+    { id: 'enc_mha', label: '🔵 Self-Attention (MHA)', side: 'encoder', color: '#f59e0b', desc: 'Each English token attends to ALL other English tokens. No mask — full bidirectional attention.' },
+    { id: 'enc_an1', label: '➕ Add & Norm', side: 'encoder', color: '#64748b', desc: 'Residual: self_attn(x) + x → LayerNorm.' },
+    { id: 'enc_ffn', label: '🧮 Feed-Forward', side: 'encoder', color: '#3b82f6', desc: 'FFN: [512→2048→512] with ReLU, applied per-token independently.' },
+    { id: 'enc_an2', label: '➕ Add & Norm', side: 'encoder', color: '#64748b', desc: 'Residual: FFN(x) + x → LayerNorm. Repeat ×6 encoder layers.' },
+  ];
+  const decStages = [
+    { id: 'dec_emb', label: '📥 Output Embedding + PE', side: 'decoder', color: '#3b82f6', desc: `Hindi tokens (shifted right) "${hiTokens.join(', ')}" → 512-dim vectors + PE.` },
+    { id: 'dec_mmha', label: '🟡 Masked Self-Attention', side: 'decoder', color: '#f59e0b', desc: 'Hindi tokens attend to past tokens ONLY (causal mask). Token 3 cannot see token 4.' },
+    { id: 'dec_an1', label: '➕ Add & Norm', side: 'decoder', color: '#64748b', desc: 'Residual + LayerNorm after masked self-attention.' },
+    { id: 'dec_cross', label: '🩷 Cross-Attention', side: 'decoder', color: '#ec4899', desc: 'Decoder Q attends to Encoder K,V. THIS IS WHERE TRANSLATION HAPPENS! "पसंद" looks at "love".' },
+    { id: 'dec_an2', label: '➕ Add & Norm', side: 'decoder', color: '#64748b', desc: 'Residual + LayerNorm after cross-attention.' },
+    { id: 'dec_ffn', label: '🧮 Feed-Forward', side: 'decoder', color: '#3b82f6', desc: 'Same FFN structure as encoder [512→2048→512]. Repeat ×6 decoder layers.' },
+    { id: 'dec_an3', label: '➕ Add & Norm', side: 'decoder', color: '#64748b', desc: 'Final residual + LayerNorm.' },
+    { id: 'dec_lin', label: '📐 Linear [512→50257]', side: 'decoder', color: '#c4b5fd', desc: 'Projects each decoder output to vocabulary size — one score per possible Hindi word.' },
+    { id: 'dec_soft', label: '📊 Softmax → Prediction', side: 'decoder', color: '#22c55e', desc: `Softmax converts logits to probabilities. Highest prob at each position: "${hiTokens.join(' ')}"` },
+  ];
+
+  const active = [...encStages, ...decStages].find(s => s.id === activeBlock);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-gray-600 dark:text-gray-400">Click any block to see what it does. The encoder processes English, the decoder generates Hindi.</p>
+
+      <div className="grid grid-cols-2 gap-3">
+        {/* ENCODER */}
+        <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
+          <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2">🔵 ENCODER (English → Context)</p>
+          <div className="flex gap-1 mb-2 flex-wrap">{enTokens.map((t, i) => <span key={i} className="px-2 py-0.5 rounded text-xs font-bold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">{t}</span>)}</div>
+          <div className="space-y-1">{encStages.map(s => (
+            <button key={s.id} onClick={() => setActiveBlock(s.id)} className={`w-full text-left px-2 py-1.5 rounded text-xs font-bold transition-all ${activeBlock === s.id ? 'text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+              style={activeBlock === s.id ? { background: s.color } : {}}>{s.label}</button>
+          ))}</div>
+          <div className="text-center text-xs text-gray-400 mt-2 font-bold">↓ ×6 layers ↓</div>
+        </div>
+
+        {/* DECODER */}
+        <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800">
+          <p className="text-xs font-bold text-purple-600 dark:text-purple-400 mb-2">🟣 DECODER (Context → Hindi)</p>
+          <div className="flex gap-1 mb-2 flex-wrap">{hiTokens.map((t, i) => <span key={i} className="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">{t}</span>)}</div>
+          <div className="space-y-1">{decStages.map(s => (
+            <button key={s.id} onClick={() => setActiveBlock(s.id)} className={`w-full text-left px-2 py-1.5 rounded text-xs font-bold transition-all ${activeBlock === s.id ? 'text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+              style={activeBlock === s.id ? { background: s.color } : {}}>{s.label}</button>
+          ))}</div>
+        </div>
+      </div>
+
+      {/* Cross-attention arrow */}
+      <div className="text-center text-xs font-bold text-pink-500">← Encoder output feeds into Decoder's Cross-Attention (K, V) →</div>
+
+      {/* Detail panel */}
+      {active ? (
+        <div className="p-4 rounded-lg" style={{ background: `${active.color}11`, border: `1px solid ${active.color}33` }}>
+          <p className="text-sm font-bold" style={{ color: active.color }}>{active.label}</p>
+          <p className="text-xs text-gray-700 dark:text-gray-300 mt-2">{active.desc}</p>
+          <div className="flex gap-2 mt-3">
+            <span className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500">{active.side === 'encoder' ? `Input: [${enTokens.length}×512]` : `Input: [${hiTokens.length}×512]`}</span>
+            <span className="text-xs px-2 py-0.5 rounded" style={{ background: `${active.color}22`, color: active.color }}>{active.side === 'encoder' ? `Output: [${enTokens.length}×512]` : active.id === 'dec_lin' ? `Output: [${hiTokens.length}×50257]` : active.id === 'dec_soft' ? `Output: [${hiTokens.length}] predictions` : `Output: [${hiTokens.length}×512]`}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-6 rounded-lg bg-gray-50 dark:bg-gray-900 text-center text-gray-400 text-xs">Click any block above to see its details</div>
+      )}
+
+      {/* Final translation */}
+      <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+        <p className="text-xs text-gray-700 dark:text-gray-300"><b>Full pipeline:</b> "{enTokens.join(' ')}" → Encoder (×6) → Decoder (×6) → Linear → Softmax → "<b className="text-green-600">{hiTokens.join(' ')}</b>"</p>
+        <p className="text-xs text-gray-500 mt-1">Encoder runs ONCE. Decoder runs 4 times (once per Hindi token, autoregressive).</p>
+      </div>
+    </div>
+  );
+}
+
+// tf-13: Model in Memory & Inference — uses the 3D memory visualization
+function InferenceMemoryLab() {
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-gray-600 dark:text-gray-400">The full trained model lives in GPU VRAM as weight matrices. Open the <b>Full Transformer Lab</b> to see the 3D memory visualization with inference animation.</p>
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <p className="text-xs font-bold text-blue-500 mb-3">📊 Parameter Count Breakdown</p>
+        {[
+          { label: 'Token Embedding', shape: '[50257 × 512]', params: '25.7M', pct: 39, color: '#22c55e' },
+          { label: 'Encoder (6 layers × MHA + FFN)', shape: '6 × (1.05M + 2.1M)', params: '18.9M', pct: 29, color: '#3b82f6' },
+          { label: 'Decoder (6 layers × MMHA + CrossMHA + FFN)', shape: '6 × (1.05M + 1.05M + 2.1M)', params: '25.2M', pct: 39, color: '#a855f7' },
+          { label: 'Linear Output', shape: '[512 × 50257]', params: '25.7M', pct: 39, color: '#c4b5fd' },
+          { label: 'Softmax', shape: 'function', params: '0', pct: 0, color: '#86efac' },
+        ].map((l, i) => (
+          <div key={i} className="flex items-center gap-2 mb-2">
+            <span className="text-xs w-36 text-right text-gray-600 dark:text-gray-400">{l.label}</span>
+            <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 160 }}>
+              <div className="h-full rounded" style={{ width: `${l.pct}%`, background: l.color }} />
+            </div>
+            <span className="text-xs font-mono font-bold" style={{ color: l.color }}>{l.params}</span>
+            <span className="text-xs text-gray-400 font-mono">{l.shape}</span>
+          </div>
+        ))}
+        <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+          <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Total</span>
+          <span className="text-xs font-bold text-yellow-500">~65M params × 4 bytes = ~260 MB (float32)</span>
+        </div>
+      </div>
+      <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+        <p className="text-xs font-bold text-green-600 dark:text-green-400 mb-2">🔁 Inference Process</p>
+        <ol className="text-xs text-gray-700 dark:text-gray-300 space-y-1 list-decimal list-inside">
+          <li>Tokenize English: "I love India" → [42, 1567, 3582]</li>
+          <li>Encoder processes ALL tokens at once (1 pass through 6 layers)</li>
+          <li>Decoder pass 1: input [START] → predicts "मुझे"</li>
+          <li>Decoder pass 2: input [START, मुझे] → predicts "भारत"</li>
+          <li>Decoder pass 3: input [START, मुझे, भारत] → predicts "पसंद"</li>
+          <li>Decoder pass 4: input [START, मुझे, भारत, पसंद] → predicts "है"</li>
+          <li>Decoder pass 5: predicts [END] → translation complete!</li>
+        </ol>
+        <p className="text-xs text-gray-500 mt-2">Encoder: 1 pass. Decoder: T passes (one per output token). That's autoregressive decoding!</p>
       </div>
     </div>
   );
@@ -1222,9 +1359,9 @@ const LESSON_LABS: Record<string, { title: string; component: React.FC }> = {
   'tf-8': { title: 'Masked Attention Viewer', component: MaskedAttentionLab },
   'tf-9': { title: 'Cross-Attention Explorer', component: CrossAttentionLab },
   'tf-10': { title: 'Multi-Head Attention Viewer', component: MultiHeadLab },
-  'tf-11': { title: 'Feed-Forward Network', component: TransformerBlockLab },
-  'tf-12': { title: 'Transformer Block Pipeline', component: TransformerBlockLab },
-  'tf-13': { title: 'Model in Memory & Inference', component: TransformerBlockLab },
+  'tf-11': { title: 'FFN & Residuals', component: FFNResidualLab },
+  'tf-12': { title: 'Full Encoder-Decoder Pipeline', component: FullEncoderDecoderLab },
+  'tf-13': { title: 'Model in Memory & Inference', component: InferenceMemoryLab },
 };
 
 /* ═══════════════════════════════════════════════════════════

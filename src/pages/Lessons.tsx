@@ -588,18 +588,87 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
         <FlowDiagram steps={[{label:'x',color:'bg-gray-500'},{label:'Sublayer(x)',color:'bg-blue-500'},{label:'+ x (residual)',color:'bg-green-500'},{label:'LayerNorm',color:'bg-purple-500'},{label:'output',color:'bg-yellow-500'}]} />
       </div>
     )},
-    { id:'tf-12', title:'Full Encoder-Decoder', description:'How all the pieces fit together for translation', icon:'🏗️', content: (
-      <div className="space-y-5">
-        <p className="text-gray-700 dark:text-gray-300">The complete Transformer has an <b>Encoder</b> (left) and a <b>Decoder</b> (right), each stacked N=6 times:</p>
-        <TransformerBlockAnim delay={0.2} />
-        <div className="flex gap-4 flex-wrap justify-center mt-4">
-          <InfoBox color="blue" title="🔵 Encoder (×6)"><p><b>Self-Attention</b> → Add&Norm → <b>FFN</b> → Add&Norm<br/>Processes ALL source tokens at once. Output: context-rich source embeddings.</p></InfoBox>
-          <InfoBox color="purple" title="🟣 Decoder (×6)"><p><b>Masked Self-Attn</b> → Add&Norm → <b>Cross-Attn</b> → Add&Norm → <b>FFN</b> → Add&Norm<br/>Generates one token at a time using encoder output.</p></InfoBox>
+    { id:'tf-12', title:'Full Encoder-Decoder', description:'How all the pieces fit together for translation', icon:'🏗️', content: (() => {
+      const encStages = [
+        { label: '📥 Embed + PE', color: '#22c55e' },
+        { label: '👁️ Self-Attention', color: '#f59e0b' },
+        { label: '➕ Add & Norm', color: '#64748b' },
+        { label: '🧮 FFN', color: '#3b82f6' },
+        { label: '➕ Add & Norm', color: '#64748b' },
+      ];
+      const decStages = [
+        { label: '📥 Embed + PE', color: '#3b82f6' },
+        { label: '🎭 Masked Self-Attn', color: '#f59e0b' },
+        { label: '➕ Add & Norm', color: '#64748b' },
+        { label: '🩷 Cross-Attention', color: '#ec4899' },
+        { label: '➕ Add & Norm', color: '#64748b' },
+        { label: '🧮 FFN', color: '#3b82f6' },
+        { label: '➕ Add & Norm', color: '#64748b' },
+        { label: '📐 Linear', color: '#c4b5fd' },
+        { label: '📊 Softmax', color: '#22c55e' },
+      ];
+      return (
+        <div className="space-y-5">
+          <p className="text-gray-700 dark:text-gray-300">The complete Transformer has an <b>Encoder</b> (processes source) and a <b>Decoder</b> (generates target). Here's the full EN→HI translation pipeline:</p>
+
+          <div className="grid grid-cols-2 gap-3">
+            {/* Encoder */}
+            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-300 dark:border-blue-800">
+              <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2">🔵 ENCODER — "I love India"</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">Processes ALL tokens at once (parallel)</p>
+              <div className="space-y-1">
+                {encStages.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
+                    <span className="text-xs font-bold" style={{ color: s.color }}>{s.label}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-blue-500 font-bold mt-2 text-center">↓ ×6 layers ↓</p>
+              <p className="text-xs text-gray-500 text-center">Output: context-rich English embeddings</p>
+            </div>
+
+            {/* Decoder */}
+            <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/10 border border-purple-300 dark:border-purple-800">
+              <p className="text-xs font-bold text-purple-600 dark:text-purple-400 mb-2">🟣 DECODER — "मुझे भारत पसंद है"</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">Generates ONE token at a time (autoregressive)</p>
+              <div className="space-y-1">
+                {decStages.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
+                    <span className="text-xs font-bold" style={{ color: s.color }}>{s.label}</span>
+                    {i === 3 && <span className="text-xs text-pink-400">← K,V from encoder!</span>}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-purple-500 font-bold mt-2 text-center">↓ ×6 layers (except Linear/Softmax) ↓</p>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className="inline-block px-4 py-2 rounded-lg bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800">
+              <p className="text-xs font-bold text-pink-500">🔗 Encoder output → Decoder Cross-Attention (K, V)</p>
+              <p className="text-xs text-gray-500">This bridge is how the decoder "reads" the English sentence</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 flex-wrap justify-center">
+            <InfoBox color="blue" title="🔵 Encoder Blocks (×6)"><p>Each block: <b>Self-Attention</b> → Add&Norm → <b>FFN</b> → Add&Norm<br/>Full bidirectional attention — every English token sees every other.</p></InfoBox>
+            <InfoBox color="purple" title="🟣 Decoder Blocks (×6)"><p>Each block: <b>Masked Self-Attn</b> → Add&Norm → <b>Cross-Attn</b> → Add&Norm → <b>FFN</b> → Add&Norm<br/>Causal mask + encoder bridge. Then Linear → Softmax for prediction.</p></InfoBox>
+          </div>
+
+          <MathBlock formula={`"I love India" → Encoder(×6) → [K,V] → Decoder(×6) → Linear → Softmax → "मुझे भारत पसंद है"`} label="Full translation pipeline" />
+
+          <InfoBox color="green" title="🔁 How Translation Actually Happens">
+            <p><b>Encoder</b> runs ONCE on all English tokens simultaneously.</p>
+            <p className="mt-1"><b>Decoder</b> runs T times (once per Hindi token):</p>
+            <p className="mt-1 font-mono text-xs">Pass 1: [START] → "मुझे"<br/>Pass 2: [START, मुझे] → "भारत"<br/>Pass 3: [START, मुझे, भारत] → "पसंद"<br/>Pass 4: [START, मुझे, भारत, पसंद] → "है"<br/>Pass 5: → [END] ✓</p>
+          </InfoBox>
+
+          <InfoBox color="yellow" title="📊 Parameters"><p>Embeddings: ~25M · Encoder: 6×(MHA+FFN) ≈ 19M · Decoder: 6×(MMHA+CrossMHA+FFN) ≈ 25M · Linear: ~25M · <b>Total ≈ 65M params</b></p></InfoBox>
         </div>
-        <MathBlock formula="Encoder output → Decoder's Cross-Attention (K, V) → Linear [512→vocab] → Softmax → predicted word" label="The full translation pipeline" />
-        <InfoBox color="green" title="📊 Total Parameters"><p>Embeddings: ~25M · Encoder: 6×(MHA+FFN) ≈ 19M · Decoder: 6×(MMHA+CrossMHA+FFN) ≈ 25M · Linear: ~25M · <b>Total ≈ 65 million parameters</b></p></InfoBox>
-      </div>
-    )},
+      );
+    })()},
     { id:'tf-13', title:'Transformer in Memory', description:'3D GPU VRAM view: trained model weights + live inference animation', icon:'🧊', content: (
       <div className="space-y-5">
         <p className="text-gray-700 dark:text-gray-300">Every weight matrix is stored as a giant array of floating-point numbers in <b>GPU VRAM</b>. Below is a <b>3D interactive visualization</b> of the trained EN→HI translation model:</p>
