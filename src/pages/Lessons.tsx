@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useUserStore } from '../store/userStore';
 import { Card } from '../components/ui/Card';
@@ -13,7 +13,7 @@ import {
   QKVProjection, MultiHeadSplit, TransformerBlockAnim, PipelineStep,
   TokenizationAnim, MaskGridAnim, CrossAttentionFlow, InferencePipeline
 } from '../components/transformer/AnimatedComponents';
-const TransformerMemory3D = lazy(() => import('../components/transformer/TransformerMemory3D'));
+import TransformerMemory3D from '../components/transformer/TransformerMemory3D';
 
 /* ═══════════════════════════════════════════════════════════
    VISUAL COMPONENTS FOR LESSONS
@@ -603,9 +603,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
     { id:'tf-13', title:'Transformer in Memory', description:'3D GPU VRAM view: trained model weights + live inference animation', icon:'🧊', content: (
       <div className="space-y-5">
         <p className="text-gray-700 dark:text-gray-300">Every weight matrix is stored as a giant array of floating-point numbers in <b>GPU VRAM</b>. Below is a <b>3D interactive visualization</b> of the trained EN→HI translation model:</p>
-        <Suspense fallback={<div className="text-center py-20"><p className="text-gray-400">Loading 3D visualization...</p></div>}>
-          <TransformerMemory3D />
-        </Suspense>
+        <TransformerMemory3D />
         <InfoBox color="yellow" title="💾 What You're Seeing"><p>Each <b>glowing block</b> is a weight matrix stored in GPU memory. The glass box represents the GPU VRAM (~260 MB). Token input packets flow in from the left, get processed through each layer, and prediction probabilities emerge on the right. Click <b>▶ Run Inference</b> to watch data flow through!</p></InfoBox>
         <InfoBox color="blue" title="📐 Memory Breakdown"><p>Token Embedding: 25.7M · Encoder (6 blocks): ~19M · Decoder (6 blocks): ~25M · Linear: 25.7M · <b>Total: ~65M params × 4 bytes = 260 MB (float32)</b> · GPT-3: 175B params = ~700 GB!</p></InfoBox>
         <p className="text-gray-700 dark:text-gray-300 font-bold">How Inference Works (English→Hindi):</p>

@@ -1,399 +1,352 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Text, RoundedBox, Line } from '@react-three/drei';
-import * as THREE from 'three';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 
-/* ═══════════════════════════════════════════════════════════
-   MODEL LAYERS — what lives in GPU VRAM
-   ═══════════════════════════════════════════════════════════ */
-const MODEL_LAYERS = [
-  { id: 'emb', label: 'Token Embedding', shape: '[50257×512]', params: '25.7M', color: '#22c55e', y: -2.8, w: 3.2, h: 0.35, d: 2.0, desc: 'Lookup table: every word → 512-dim vector' },
-  { id: 'pe', label: 'Positional Encoding', shape: '[512×512]', params: '262K', color: '#06b6d4', y: -2.2, w: 2.8, h: 0.25, d: 1.8, desc: 'Sine/cosine waves for position info' },
-  { id: 'enc_mha1', label: 'Encoder MHA Layer 1', shape: '4×[512×64]', params: '1.05M', color: '#f59e0b', y: -1.5, w: 3.0, h: 0.4, d: 2.2, desc: 'W_Q, W_K, W_V, W_O matrices' },
-  { id: 'enc_ffn1', label: 'Encoder FFN Layer 1', shape: '[512×2048]+[2048×512]', params: '2.1M', color: '#3b82f6', y: -0.9, w: 2.6, h: 0.35, d: 2.4, desc: 'Feed-forward: expand → ReLU → compress' },
-  { id: 'enc_rest', label: 'Encoder Layers 2-6', shape: '×5 blocks', params: '15.75M', color: '#2563eb', y: -0.2, w: 3.4, h: 0.5, d: 2.0, desc: '5 more encoder blocks (same structure)' },
-  { id: 'dec_mmha', label: 'Decoder Masked MHA', shape: '4×[512×64]', params: '1.05M', color: '#a855f7', y: 0.5, w: 2.8, h: 0.35, d: 2.2, desc: 'Masked self-attention (causal)' },
-  { id: 'dec_xmha', label: 'Decoder Cross MHA', shape: '4×[512×64]', params: '1.05M', color: '#ec4899', y: 1.1, w: 2.6, h: 0.35, d: 2.0, desc: 'Cross-attention: decoder→encoder' },
-  { id: 'dec_ffn', label: 'Decoder FFN Layer 1', shape: '[512×2048]+[2048×512]', params: '2.1M', color: '#f472b6', y: 1.7, w: 2.4, h: 0.3, d: 2.2, desc: 'Decoder feed-forward network' },
-  { id: 'dec_rest', label: 'Decoder Layers 2-6', shape: '×5 blocks', params: '21M', color: '#7c3aed', y: 2.3, w: 3.2, h: 0.5, d: 2.0, desc: '5 more decoder blocks' },
-  { id: 'linear', label: 'Linear Output', shape: '[512×50257]', params: '25.7M', color: '#c4b5fd', y: 3.0, w: 3.0, h: 0.3, d: 1.8, desc: 'Projects to vocabulary for prediction' },
-  { id: 'softmax', label: 'Softmax', shape: 'function', params: '0 params', color: '#86efac', y: 3.5, w: 2.2, h: 0.2, d: 1.4, desc: 'Converts logits → probabilities' },
+/* ═══ MODEL LAYERS ═══ */
+const LAYERS = [
+  { label: 'Token Embedding', shape: '[50257×512]', params: '25.7M', color: '#22c55e', desc: 'Lookup table: every word → 512-dim vector', size: 1.0 },
+  { label: 'Positional Encoding', shape: '[512×512]', params: '262K', color: '#06b6d4', desc: 'Sine/cosine waves for position info', size: 0.85 },
+  { label: 'Encoder MHA ×6', shape: '6×4×[512×64]', params: '6.3M', color: '#f59e0b', desc: 'Self-attention: W_Q, W_K, W_V, W_O per layer', size: 1.1 },
+  { label: 'Encoder FFN ×6', shape: '6×[512×2048×2]', params: '12.6M', color: '#3b82f6', desc: 'Feed-forward: expand→ReLU→compress per layer', size: 1.05 },
+  { label: 'Decoder Masked MHA ×6', shape: '6×4×[512×64]', params: '6.3M', color: '#a855f7', desc: 'Masked self-attention (causal) per decoder layer', size: 1.0 },
+  { label: 'Decoder Cross MHA ×6', shape: '6×4×[512×64]', params: '6.3M', color: '#ec4899', desc: 'Cross-attention: decoder→encoder per layer', size: 0.95 },
+  { label: 'Decoder FFN ×6', shape: '6×[512×2048×2]', params: '12.6M', color: '#f472b6', desc: 'Decoder feed-forward per layer', size: 1.0 },
+  { label: 'Linear Output', shape: '[512×50257]', params: '25.7M', color: '#c4b5fd', desc: 'Projects to vocabulary for prediction', size: 0.9 },
+  { label: 'Softmax', shape: 'function', params: '0', color: '#86efac', desc: 'Converts logits → probabilities', size: 0.7 },
 ];
 
-/* ═══════════════════════════════════════════════════════════
-   GLASS BOX — the GPU VRAM container
-   ═══════════════════════════════════════════════════════════ */
-function GlassBox() {
-  const ref = useRef<THREE.Mesh>(null);
-  return (
-    <mesh ref={ref} position={[0, 0.3, 0]}>
-      <boxGeometry args={[5, 8, 4]} />
-      <meshPhysicalMaterial
-        color="#1a1a3e"
-        transparent
-        opacity={0.08}
-        roughness={0.05}
-        metalness={0.1}
-        transmission={0.92}
-        thickness={0.5}
-        side={THREE.DoubleSide}
-      />
-      {/* Edge wireframe */}
-      <lineSegments>
-        <edgesGeometry args={[new THREE.BoxGeometry(5, 8, 4)]} />
-        <lineBasicMaterial color="#3b82f6" transparent opacity={0.25} />
-      </lineSegments>
-    </mesh>
-  );
+/* ═══ PARTICLES ═══ */
+interface Particle { x: number; y: number; z: number; vx: number; vy: number; color: string; life: number; }
+
+function createParticles(count: number): Particle[] {
+  const colors = ['#22c55e', '#3b82f6', '#a855f7', '#f59e0b', '#ec4899', '#06b6d4'];
+  return Array.from({ length: count }, () => ({
+    x: (Math.random() - 0.5) * 200, y: Math.random() * 400 - 50, z: (Math.random() - 0.5) * 120,
+    vx: (Math.random() - 0.5) * 0.3, vy: 0.4 + Math.random() * 0.6, color: colors[Math.floor(Math.random() * colors.length)], life: Math.random(),
+  }));
 }
 
-/* ═══════════════════════════════════════════════════════════
-   TENSOR BLOCK — a single weight matrix layer
-   ═══════════════════════════════════════════════════════════ */
-function TensorBlock({ layer, index, activeLayer, onHover }: any) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const [hovered, setHovered] = useState(false);
-  const isActive = activeLayer === index;
-  const color = new THREE.Color(layer.color);
-
-  useFrame((_, delta) => {
-    if (meshRef.current) {
-      // Gentle float
-      meshRef.current.position.y = layer.y + Math.sin(Date.now() * 0.001 + index * 0.5) * 0.03;
-      // Glow pulse when active
-      const mat = meshRef.current.material as THREE.MeshStandardMaterial;
-      if (isActive) {
-        mat.emissiveIntensity = 0.8 + Math.sin(Date.now() * 0.005) * 0.4;
-      } else if (hovered) {
-        mat.emissiveIntensity = 0.5;
-      } else {
-        mat.emissiveIntensity = 0.15;
-      }
-    }
-  });
-
-  return (
-    <group>
-      <mesh
-        ref={meshRef}
-        position={[0, layer.y, 0]}
-        onPointerOver={() => { setHovered(true); onHover(index); }}
-        onPointerOut={() => { setHovered(false); onHover(-1); }}
-      >
-        <boxGeometry args={[layer.w, layer.h, layer.d]} />
-        <meshStandardMaterial
-          color={color}
-          transparent
-          opacity={isActive ? 0.85 : hovered ? 0.7 : 0.45}
-          emissive={color}
-          emissiveIntensity={0.15}
-          roughness={0.3}
-          metalness={0.6}
-        />
-      </mesh>
-      {/* Wireframe outline */}
-      <mesh position={[0, layer.y, 0]}>
-        <boxGeometry args={[layer.w, layer.h, layer.d]} />
-        <meshBasicMaterial color={layer.color} wireframe transparent opacity={isActive ? 0.6 : 0.2} />
-      </mesh>
-      {/* Label */}
-      <Text
-        position={[0, layer.y + layer.h / 2 + 0.12, layer.d / 2 + 0.01]}
-        fontSize={0.14}
-        color={hovered || isActive ? '#ffffff' : '#94a3b8'}
-        anchorX="center"
-        anchorY="bottom"
-        font={undefined}
-      >
-        {layer.label}
-      </Text>
-      <Text
-        position={[0, layer.y - layer.h / 2 - 0.08, layer.d / 2 + 0.01]}
-        fontSize={0.1}
-        color={layer.color}
-        anchorX="center"
-        anchorY="top"
-        font={undefined}
-      >
-        {layer.shape} · {layer.params}
-      </Text>
-    </group>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   DATA PARTICLES — flowing tokens through the model
-   ═══════════════════════════════════════════════════════════ */
-function DataParticles({ flowing, direction }: { flowing: boolean; direction: 'in' | 'out' | 'through' }) {
-  const count = 120;
-  const ref = useRef<THREE.Points>(null);
-  const positions = useMemo(() => {
-    const arr = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      arr[i * 3] = (Math.random() - 0.5) * 3;
-      arr[i * 3 + 1] = Math.random() * 8 - 4;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 2.5;
-    }
-    return arr;
-  }, []);
-
-  const colors = useMemo(() => {
-    const arr = new Float32Array(count * 3);
-    const palette = [[0.13, 0.76, 0.96], [0.39, 0.56, 0.94], [0.66, 0.33, 0.97], [0.13, 0.85, 0.39], [0.96, 0.62, 0.04]];
-    for (let i = 0; i < count; i++) {
-      const c = palette[Math.floor(Math.random() * palette.length)];
-      arr[i * 3] = c[0]; arr[i * 3 + 1] = c[1]; arr[i * 3 + 2] = c[2];
-    }
-    return arr;
-  }, []);
-
-  useFrame(() => {
-    if (!ref.current || !flowing) return;
-    const pos = ref.current.geometry.attributes.position.array as Float32Array;
-    for (let i = 0; i < count; i++) {
-      if (direction === 'in') {
-        pos[i * 3] += (0 - pos[i * 3]) * 0.01 + (Math.random() - 0.5) * 0.02;
-        pos[i * 3 + 1] += 0.04;
-        if (pos[i * 3 + 1] > 4) { pos[i * 3 + 1] = -4; pos[i * 3] = (Math.random() - 0.5) * 4 - 3; }
-      } else if (direction === 'out') {
-        pos[i * 3] += (3 - pos[i * 3]) * 0.005 + (Math.random() - 0.5) * 0.02;
-        pos[i * 3 + 1] += 0.03;
-        if (pos[i * 3 + 1] > 4.5) { pos[i * 3 + 1] = 3; pos[i * 3] = (Math.random() - 0.5) * 2; }
-      } else {
-        pos[i * 3 + 1] += 0.025;
-        pos[i * 3] += (Math.random() - 0.5) * 0.01;
-        if (pos[i * 3 + 1] > 4) pos[i * 3 + 1] = -4;
-      }
-    }
-    ref.current.geometry.attributes.position.needsUpdate = true;
-  });
-
-  return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
-        <bufferAttribute attach="attributes-color" count={count} array={colors} itemSize={3} />
-      </bufferGeometry>
-      <pointsMaterial size={0.06} transparent opacity={flowing ? 0.8 : 0.15} vertexColors sizeAttenuation />
-    </points>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   INPUT/OUTPUT STREAMS — token packets flowing in/out
-   ═══════════════════════════════════════════════════════════ */
-function TokenStream({ side, tokens, color, flowing }: any) {
-  const x = side === 'in' ? -3.5 : 3.5;
-  const direction = side === 'in' ? 1 : -1;
-  const ref = useRef<THREE.Group>(null);
-
-  useFrame(() => {
-    if (ref.current && flowing) {
-      ref.current.children.forEach((child, i) => {
-        child.position.x += direction * 0.015;
-        if (side === 'in' && child.position.x > -0.5) child.position.x = -5;
-        if (side === 'out' && child.position.x < 0.5) child.position.x = 5;
-      });
-    }
-  });
-
-  return (
-    <group ref={ref}>
-      {tokens.map((t: string, i: number) => (
-        <group key={i} position={[x - i * 0.8 * direction, -3.5, 0]}>
-          <mesh>
-            <boxGeometry args={[0.6, 0.25, 0.25]} />
-            <meshStandardMaterial color={color} transparent opacity={0.7} emissive={color} emissiveIntensity={0.4} />
-          </mesh>
-          <Text position={[0, 0, 0.14]} fontSize={0.1} color="#fff" anchorX="center" anchorY="middle">{t}</Text>
-        </group>
-      ))}
-    </group>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   CUDA CORES — bottom of the GPU
-   ═══════════════════════════════════════════════════════════ */
-function CudaCores() {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(() => {
-    if (ref.current) {
-      ref.current.children.forEach((child, i) => {
-        const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial;
-        mat.emissiveIntensity = 0.3 + Math.sin(Date.now() * 0.003 + i * 0.4) * 0.3;
-      });
-    }
-  });
-
-  return (
-    <group ref={ref} position={[0, -4.3, 0]}>
-      {Array.from({ length: 40 }).map((_, i) => {
-        const x = (i % 10 - 4.5) * 0.45;
-        const z = (Math.floor(i / 10) - 1.5) * 0.6;
-        return (
-          <mesh key={i} position={[x, 0, z]}>
-            <cylinderGeometry args={[0.12, 0.15, 0.25, 6]} />
-            <meshStandardMaterial color="#6366f1" emissive="#6366f1" emissiveIntensity={0.3} metalness={0.8} roughness={0.2} />
-          </mesh>
-        );
-      })}
-      <Text position={[0, -0.3, 1.5]} fontSize={0.18} color="#6366f1" anchorX="center">CUDA Compute Cores</Text>
-      <Text position={[0, -0.5, 1.5]} fontSize={0.12} color="#475569" anchorX="center">Parallel matrix multiplication engines</Text>
-    </group>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   INFERENCE FLOW LINE — animated dashed line through layers
-   ═══════════════════════════════════════════════════════════ */
-function InferenceFlow({ activeLayer }: { activeLayer: number }) {
-  const ref = useRef<THREE.Line>(null);
-  if (activeLayer < 0) return null;
-
-  const points = MODEL_LAYERS.slice(0, activeLayer + 1).map(l => new THREE.Vector3(0, l.y, 0));
-  if (points.length < 2) return null;
-
-  return (
-    <Line
-      points={points}
-      color="#facc15"
-      lineWidth={3}
-      dashed
-      dashSize={0.15}
-      gapSize={0.08}
-    />
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   LABELS — GPU VRAM, titles
-   ═══════════════════════════════════════════════════════════ */
-function Labels() {
-  return (
-    <group>
-      <Text position={[0, -4.7, 2.2]} fontSize={0.22} color="#3b82f6" anchorX="center" fontWeight="bold">GPU VRAM</Text>
-      <Text position={[0, -4.95, 2.2]} fontSize={0.12} color="#475569" anchorX="center">~260 MB (float32) · ~130 MB (float16)</Text>
-      <Text position={[-3.5, -3.0, 0]} fontSize={0.14} color="#22c55e" anchorX="center">Token Input</Text>
-      <Text position={[-3.5, -3.2, 0]} fontSize={0.09} color="#22c55e" anchorX="center">Packets</Text>
-      <Text position={[3.5, 3.8, 0]} fontSize={0.14} color="#a855f7" anchorX="center">Prediction</Text>
-      <Text position={[3.5, 3.6, 0]} fontSize={0.09} color="#a855f7" anchorX="center">Token Probabilities</Text>
-      <Text position={[0, 4.6, 0]} fontSize={0.2} color="#e2e8f0" anchorX="center" fontWeight="bold">Transformer Model in Memory</Text>
-      <Text position={[0, 4.3, 0]} fontSize={0.11} color="#64748b" anchorX="center">d_model=512 · 8 heads · 6 layers · ~65M parameters</Text>
-    </group>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   MAIN SCENE
-   ═══════════════════════════════════════════════════════════ */
-function Scene({ activeLayer, setHoveredLayer, flowing }: any) {
-  return (
-    <>
-      <ambientLight intensity={0.3} />
-      <pointLight position={[5, 5, 5]} intensity={1} color="#3b82f6" />
-      <pointLight position={[-5, 5, -5]} intensity={0.7} color="#a855f7" />
-      <pointLight position={[0, -3, 3]} intensity={0.5} color="#22c55e" />
-
-      <GlassBox />
-
-      {MODEL_LAYERS.map((layer, i) => (
-        <TensorBlock key={layer.id} layer={layer} index={i} activeLayer={activeLayer} onHover={setHoveredLayer} />
-      ))}
-
-      <DataParticles flowing={flowing} direction="through" />
-      <TokenStream side="in" tokens={['I', 'love', 'India']} color="#22c55e" flowing={flowing} />
-      <TokenStream side="out" tokens={['मुझे', 'भारत', 'पसंद', 'है']} color="#a855f7" flowing={flowing} />
-
-      <InferenceFlow activeLayer={activeLayer} />
-      <CudaCores />
-      <Labels />
-
-      <OrbitControls
-        enablePan={false}
-        minDistance={4}
-        maxDistance={16}
-        minPolarAngle={0.3}
-        maxPolarAngle={2.5}
-        autoRotate={!flowing}
-        autoRotateSpeed={0.5}
-      />
-    </>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   EXPORTED COMPONENT
-   ═══════════════════════════════════════════════════════════ */
+/* ═══ MAIN COMPONENT ═══ */
 export default function TransformerMemory3D() {
-  const [activeLayer, setActiveLayer] = useState(-1);
-  const [hoveredLayer, setHoveredLayer] = useState(-1);
-  const [flowing, setFlowing] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [rotY, setRotY] = useState(25);
+  const [rotX, setRotX] = useState(-18);
+  const [zoom, setZoom] = useState(1.0);
+  const [dragging, setDragging] = useState(false);
+  const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 });
+  const [hovered, setHovered] = useState(-1);
+  const [inferStep, setInferStep] = useState(-1);
   const [autoInfer, setAutoInfer] = useState(false);
+  const particlesRef = useRef<Particle[]>(createParticles(80));
+  const animRef = useRef<number>(0);
+  const timeRef = useRef(0);
 
-  // Auto inference animation
+  const W = 700, H = 520;
+
+  // 3D → 2D projection
+  const project = useCallback((x: number, y: number, z: number) => {
+    const ry = (rotY * Math.PI) / 180, rx = (rotX * Math.PI) / 180;
+    const x1 = x * Math.cos(ry) - z * Math.sin(ry);
+    const z1 = x * Math.sin(ry) + z * Math.cos(ry);
+    const y1 = y * Math.cos(rx) - z1 * Math.sin(rx);
+    const z2 = y * Math.sin(rx) + z1 * Math.cos(rx);
+    const fov = 600 * zoom;
+    const scale = fov / (fov + z2 + 300);
+    return { sx: W / 2 + x1 * scale, sy: H / 2 + y1 * scale, scale, z: z2 };
+  }, [rotY, rotX, zoom]);
+
+  // Draw a 3D filled box face
+  const drawFace = useCallback((ctx: CanvasRenderingContext2D, pts: { sx: number; sy: number }[], color: string, alpha: number) => {
+    ctx.fillStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].sx, pts[0].sy);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].sx, pts[i].sy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha * 0.6;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }, []);
+
+  // Render loop
   useEffect(() => {
-    if (autoInfer && activeLayer < MODEL_LAYERS.length - 1) {
-      const t = setTimeout(() => setActiveLayer(p => p + 1), 800);
-      return () => clearTimeout(t);
-    } else if (activeLayer >= MODEL_LAYERS.length - 1) {
-      setAutoInfer(false);
-    }
-  }, [autoInfer, activeLayer]);
+    const c = canvasRef.current; if (!c) return;
+    const ctx = c.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    c.width = W * dpr; c.height = H * dpr;
+    ctx.scale(dpr, dpr);
 
-  const startInference = () => {
-    setActiveLayer(-1);
-    setFlowing(true);
-    setTimeout(() => { setActiveLayer(0); setAutoInfer(true); }, 200);
+    const draw = () => {
+      timeRef.current += 0.016;
+      const t = timeRef.current;
+      ctx.clearRect(0, 0, W, H);
+
+      // Background
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#020617'); bg.addColorStop(0.5, '#0a0a2e'); bg.addColorStop(1, '#020617');
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+      // Floor grid
+      ctx.strokeStyle = '#1e293b44'; ctx.lineWidth = 0.5;
+      for (let i = -150; i <= 150; i += 30) {
+        const p1 = project(i, 200, -100), p2 = project(i, 200, 100);
+        ctx.beginPath(); ctx.moveTo(p1.sx, p1.sy); ctx.lineTo(p2.sx, p2.sy); ctx.stroke();
+        const p3 = project(-150, 200, i * 0.66), p4 = project(150, 200, i * 0.66);
+        ctx.beginPath(); ctx.moveTo(p3.sx, p3.sy); ctx.lineTo(p4.sx, p4.sy); ctx.stroke();
+      }
+
+      // Glass box outline
+      const bw = 160, bh = 360, bd = 100;
+      const boxCorners = [
+        project(-bw, -bh / 2 + 30, -bd), project(bw, -bh / 2 + 30, -bd),
+        project(bw, -bh / 2 + 30, bd), project(-bw, -bh / 2 + 30, bd),
+        project(-bw, bh / 2 + 30, -bd), project(bw, bh / 2 + 30, -bd),
+        project(bw, bh / 2 + 30, bd), project(-bw, bh / 2 + 30, bd),
+      ];
+      const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+      ctx.strokeStyle = '#3b82f633'; ctx.lineWidth = 1.5;
+      edges.forEach(([a, b]) => { ctx.beginPath(); ctx.moveTo(boxCorners[a].sx, boxCorners[a].sy); ctx.lineTo(boxCorners[b].sx, boxCorners[b].sy); ctx.stroke(); });
+
+      // Glass faces (semi-transparent)
+      drawFace(ctx, [boxCorners[0], boxCorners[1], boxCorners[5], boxCorners[4]], '#1a1a4e', 0.05);
+      drawFace(ctx, [boxCorners[1], boxCorners[2], boxCorners[6], boxCorners[5]], '#1a1a4e', 0.04);
+      drawFace(ctx, [boxCorners[4], boxCorners[5], boxCorners[6], boxCorners[7]], '#1a2a5e', 0.06);
+
+      // CUDA cores at bottom
+      for (let i = 0; i < 30; i++) {
+        const cx = (i % 10 - 4.5) * 28, cz = (Math.floor(i / 10) - 1) * 35;
+        const p = project(cx, 195, cz);
+        const r = 4 * p.scale;
+        const pulse = 0.4 + Math.sin(t * 3 + i * 0.4) * 0.3;
+        ctx.fillStyle = `rgba(99,102,241,${pulse})`; ctx.beginPath(); ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(99,102,241,${pulse * 0.5})`; ctx.lineWidth = 0.5; ctx.stroke();
+      }
+      // CUDA label
+      const cudaP = project(0, 210, 80);
+      ctx.fillStyle = '#6366f1'; ctx.font = `bold ${10 * zoom}px "JetBrains Mono", monospace`; ctx.textAlign = 'center';
+      ctx.fillText('CUDA Compute Cores', cudaP.sx, cudaP.sy);
+
+      // Particles
+      const particles = particlesRef.current;
+      const flowing = inferStep >= 0;
+      particles.forEach(p => {
+        if (flowing) { p.y += p.vy * 1.5; p.x += p.vx; } else { p.y += p.vy * 0.3; }
+        if (p.y > 200) { p.y = -50; p.x = (Math.random() - 0.5) * 200; p.z = (Math.random() - 0.5) * 80; }
+        const pp = project(p.x, p.y, p.z);
+        const size = Math.max(1, 2.5 * pp.scale);
+        ctx.fillStyle = p.color; ctx.globalAlpha = flowing ? 0.7 : 0.2;
+        ctx.beginPath(); ctx.arc(pp.sx, pp.sy, size, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      // Token input stream (left side)
+      const inputTokens = ['I', 'love', 'India'];
+      inputTokens.forEach((tok, i) => {
+        const xOff = -220 - i * 40 + (flowing ? (t * 30 % 160) : 0);
+        const p = project(xOff, 140, 0);
+        if (p.sx > 50 && p.sx < W - 50) {
+          ctx.fillStyle = '#22c55e44'; ctx.strokeStyle = '#22c55e88'; ctx.lineWidth = 1;
+          const bx = p.sx - 18, by = p.sy - 8;
+          ctx.beginPath(); ctx.roundRect(bx, by, 36, 16, 4); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#22c55e'; ctx.font = `bold ${9 * p.scale}px "JetBrains Mono", monospace`; ctx.textAlign = 'center';
+          ctx.fillText(tok, p.sx, p.sy + 3);
+        }
+      });
+      // Input label
+      const inP = project(-220, 120, 0);
+      ctx.fillStyle = '#22c55e'; ctx.font = `bold ${10 * zoom}px "JetBrains Mono", monospace`; ctx.textAlign = 'center';
+      ctx.fillText('Token Input Packets', inP.sx, inP.sy);
+
+      // Output stream (right side)
+      const outputTokens = ['मुझे', 'भारत', 'पसंद', 'है'];
+      outputTokens.forEach((tok, i) => {
+        const xOff = 220 + i * 40 - (flowing ? (t * 25 % 180) : 0);
+        const p = project(xOff, -140, 0);
+        if (p.sx > 50 && p.sx < W - 50) {
+          ctx.fillStyle = '#a855f744'; ctx.strokeStyle = '#a855f788'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.roundRect(p.sx - 22, p.sy - 8, 44, 16, 4); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#a855f7'; ctx.font = `bold ${9 * p.scale}px "JetBrains Mono", monospace`; ctx.textAlign = 'center';
+          ctx.fillText(tok, p.sx, p.sy + 3);
+        }
+      });
+      const outP = project(220, -160, 0);
+      ctx.fillStyle = '#a855f7'; ctx.font = `bold ${10 * zoom}px "JetBrains Mono", monospace`; ctx.textAlign = 'center';
+      ctx.fillText('Prediction Probabilities', outP.sx, outP.sy);
+
+      // LAYER BLOCKS — sorted by depth
+      const layerRenders: { idx: number; y: number; avgZ: number }[] = [];
+      LAYERS.forEach((layer, i) => {
+        const yPos = 160 - i * 38;
+        const p = project(0, yPos, 0);
+        layerRenders.push({ idx: i, y: yPos, avgZ: p.z || 0 });
+      });
+      layerRenders.sort((a, b) => b.avgZ - a.avgZ);
+
+      layerRenders.forEach(({ idx, y: yPos }) => {
+        const layer = LAYERS[idx];
+        const w = 110 * layer.size, h = 22, d = 55 * layer.size;
+        const isHov = hovered === idx;
+        const isActive = inferStep >= 0 && idx <= inferStep;
+        const isCurrent = inferStep === idx;
+        const bob = Math.sin(t * 1.5 + idx * 0.6) * 2;
+
+        // 8 corners
+        const corners = [
+          project(-w, yPos + bob - h, -d), project(w, yPos + bob - h, -d),
+          project(w, yPos + bob - h, d), project(-w, yPos + bob - h, d),
+          project(-w, yPos + bob + h, -d), project(w, yPos + bob + h, -d),
+          project(w, yPos + bob + h, d), project(-w, yPos + bob + h, d),
+        ];
+
+        const baseAlpha = isActive ? 0.75 : isHov ? 0.65 : 0.35;
+
+        // Top face
+        drawFace(ctx, [corners[0], corners[1], corners[5], corners[4]], layer.color, baseAlpha);
+        // Front face
+        drawFace(ctx, [corners[4], corners[5], corners[6], corners[7]], layer.color, baseAlpha * 0.7);
+        // Right face
+        drawFace(ctx, [corners[1], corners[2], corners[6], corners[5]], layer.color, baseAlpha * 0.5);
+
+        // Glow for current inference step
+        if (isCurrent) {
+          ctx.shadowColor = layer.color; ctx.shadowBlur = 20;
+          ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2.5; ctx.globalAlpha = 0.9;
+          ctx.beginPath();
+          ctx.moveTo(corners[0].sx, corners[0].sy);
+          [1, 5, 4].forEach(i => ctx.lineTo(corners[i].sx, corners[i].sy));
+          ctx.closePath(); ctx.stroke();
+          ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        }
+
+        // Label
+        const cx = (corners[0].sx + corners[1].sx + corners[5].sx + corners[4].sx) / 4;
+        const cy = (corners[0].sy + corners[1].sy + corners[5].sy + corners[4].sy) / 4;
+        ctx.fillStyle = isHov || isCurrent ? '#fff' : '#e2e8f0bb';
+        ctx.font = `bold ${Math.max(8, 11 * corners[0].scale)}px "JetBrains Mono", monospace`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(layer.label, cx, cy - 3);
+        ctx.fillStyle = `${layer.color}cc`;
+        ctx.font = `${Math.max(6, 8 * corners[0].scale)}px "JetBrains Mono", monospace`;
+        ctx.fillText(`${layer.shape} · ${layer.params}`, cx, cy + 8);
+
+        // Inference flow line
+        if (isActive && idx < LAYERS.length - 1 && inferStep > idx) {
+          const nextY = 160 - (idx + 1) * 38;
+          const from = project(0, yPos + bob - h - 5, 0);
+          const to = project(0, nextY + 25, 0);
+          ctx.setLineDash([5, 3]);
+          ctx.strokeStyle = '#facc1577'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(from.sx, from.sy); ctx.lineTo(to.sx, to.sy); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      });
+
+      // Title
+      ctx.fillStyle = '#e2e8f0'; ctx.font = `bold ${16 * zoom}px "DM Sans", sans-serif`; ctx.textAlign = 'center';
+      ctx.fillText('Transformer Model in GPU Memory', W / 2, 22);
+      ctx.fillStyle = '#64748b'; ctx.font = `${10 * zoom}px "JetBrains Mono", monospace`;
+      ctx.fillText('d_model=512 · 8 heads · 6 layers · ~65M parameters · ~260 MB VRAM', W / 2, 38);
+
+      // GPU VRAM label
+      const vramP = project(0, 210, -110);
+      ctx.fillStyle = '#3b82f6'; ctx.font = `bold ${12 * zoom}px "JetBrains Mono", monospace`;
+      ctx.fillText('GPU VRAM', vramP.sx, vramP.sy);
+      ctx.fillStyle = '#475569'; ctx.font = `${9 * zoom}px "JetBrains Mono", monospace`;
+      ctx.fillText('~260 MB (float32) · ~130 MB (float16)', vramP.sx, vramP.sy + 14);
+
+      animRef.current = requestAnimationFrame(draw);
+    };
+
+    animRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [rotY, rotX, zoom, hovered, inferStep, project, drawFace]);
+
+  // Mouse handlers
+  const onMouseDown = (e: React.MouseEvent) => {
+    setDragging(true);
+    setLastMouse({ x: e.clientX, y: e.clientY });
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (dragging) {
+      const dx = e.clientX - lastMouse.x, dy = e.clientY - lastMouse.y;
+      setRotY(p => p + dx * 0.4);
+      setRotX(p => Math.max(-50, Math.min(20, p + dy * 0.4)));
+      setLastMouse({ x: e.clientX, y: e.clientY });
+    } else {
+      // Hover detection
+      const mx = (e.clientX - rect.left) * (W / rect.width);
+      const my = (e.clientY - rect.top) * (H / rect.height);
+      let found = -1;
+      for (let i = 0; i < LAYERS.length; i++) {
+        const yPos = 160 - i * 38;
+        const p = project(0, yPos, 0);
+        if (Math.abs(mx - p.sx) < 90 * zoom && Math.abs(my - p.sy) < 16 * zoom) { found = i; break; }
+      }
+      setHovered(found);
+    }
+  };
+  const onMouseUp = () => setDragging(false);
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    setZoom(p => Math.max(0.5, Math.min(2.2, p - e.deltaY * 0.001)));
   };
 
-  const displayLayer = hoveredLayer >= 0 ? hoveredLayer : activeLayer >= 0 ? activeLayer : -1;
+  // Auto inference
+  useEffect(() => {
+    if (autoInfer && inferStep < LAYERS.length - 1) {
+      const t = setTimeout(() => setInferStep(p => p + 1), 700);
+      return () => clearTimeout(t);
+    } else if (inferStep >= LAYERS.length - 1) setAutoInfer(false);
+  }, [autoInfer, inferStep]);
+
+  const startInference = () => {
+    setInferStep(-1);
+    setTimeout(() => { setInferStep(0); setAutoInfer(true); }, 100);
+  };
 
   return (
-    <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', background: '#020617' }}>
-      <Canvas
-        camera={{ position: [6, 2, 8], fov: 45 }}
-        style={{ height: 520, background: 'linear-gradient(180deg, #020617 0%, #0a0a2e 50%, #020617 100%)' }}
-        gl={{ antialias: true, alpha: true }}
-      >
-        <Scene activeLayer={activeLayer} setHoveredLayer={setHoveredLayer} flowing={flowing} />
-      </Canvas>
+    <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#020617' }}>
+      <canvas ref={canvasRef}
+        style={{ width: W, height: H, display: 'block', margin: '0 auto', cursor: dragging ? 'grabbing' : 'grab', maxWidth: '100%', borderRadius: 14 }}
+        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onWheel={onWheel}
+      />
 
-      {/* Controls overlay */}
-      <div style={{ position: 'absolute', bottom: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 8 }}>
+      {/* Controls */}
+      <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
         <button onClick={startInference}
-          style={{ padding: '6px 16px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: autoInfer ? '#dc2626' : '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
+          style={{ padding: '5px 14px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: autoInfer ? '#dc2626' : '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
           {autoInfer ? '⏸ Running...' : '▶ Run Inference'}
         </button>
-        <button onClick={() => { setActiveLayer(-1); setFlowing(false); setAutoInfer(false); }}
-          style={{ padding: '6px 12px', borderRadius: 8, fontSize: 11, background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
-          ↺ Reset
-        </button>
+        <button onClick={() => { setInferStep(-1); setAutoInfer(false); }}
+          style={{ padding: '5px 10px', borderRadius: 7, fontSize: 11, background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', cursor: 'pointer' }}>↺ Reset</button>
+        <button onClick={() => { setRotY(25); setRotX(-18); setZoom(1); }}
+          style={{ padding: '5px 10px', borderRadius: 7, fontSize: 11, background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', cursor: 'pointer' }}>⊙ Reset View</button>
       </div>
 
-      <p style={{ position: 'absolute', top: 8, right: 12, fontSize: 9, color: '#475569', fontFamily: "'JetBrains Mono', monospace" }}>
-        🖱️ Drag to rotate · Scroll to zoom
+      <p style={{ position: 'absolute', top: 48, right: 10, fontSize: 8, color: '#475569', fontFamily: "'JetBrains Mono', monospace" }}>
+        🖱️ Drag=rotate · Scroll=zoom
       </p>
 
-      {/* Info panel */}
-      {displayLayer >= 0 && MODEL_LAYERS[displayLayer] && (
-        <div style={{ position: 'absolute', top: 12, left: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(2,6,23,0.92)', border: `1.5px solid ${MODEL_LAYERS[displayLayer].color}`, maxWidth: 280, backdropFilter: 'blur(8px)' }}>
-          <p style={{ fontSize: 13, fontFamily: "'JetBrains Mono', monospace", color: MODEL_LAYERS[displayLayer].color, fontWeight: 700, marginBottom: 4 }}>
-            {MODEL_LAYERS[displayLayer].label}
-          </p>
-          <p style={{ fontSize: 10, color: '#c8d6e5', marginBottom: 6 }}>{MODEL_LAYERS[displayLayer].desc}</p>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <span style={{ fontSize: 9, color: '#f59e0b', fontFamily: "'JetBrains Mono', monospace" }}>Shape: {MODEL_LAYERS[displayLayer].shape}</span>
-            <span style={{ fontSize: 9, color: '#22c55e', fontFamily: "'JetBrains Mono', monospace" }}>{MODEL_LAYERS[displayLayer].params}</span>
-          </div>
+      {/* Hover info panel */}
+      {hovered >= 0 && LAYERS[hovered] && (
+        <div style={{ position: 'absolute', top: 50, left: 10, padding: '10px 14px', borderRadius: 10, background: 'rgba(2,6,23,0.93)', border: `1.5px solid ${LAYERS[hovered].color}`, maxWidth: 260, backdropFilter: 'blur(8px)' }}>
+          <p style={{ fontSize: 13, fontFamily: "'JetBrains Mono', monospace", color: LAYERS[hovered].color, fontWeight: 700, margin: 0 }}>{LAYERS[hovered].label}</p>
+          <p style={{ fontSize: 10, color: '#c8d6e5', margin: '4px 0' }}>{LAYERS[hovered].desc}</p>
+          <span style={{ fontSize: 9, color: '#f59e0b', fontFamily: "'JetBrains Mono', monospace" }}>Shape: {LAYERS[hovered].shape}</span>
+          <span style={{ fontSize: 9, color: '#22c55e', fontFamily: "'JetBrains Mono', monospace", marginLeft: 8 }}>{LAYERS[hovered].params} params</span>
         </div>
       )}
 
       {/* Inference status */}
-      {activeLayer >= 0 && (
-        <div style={{ position: 'absolute', bottom: 48, left: '50%', transform: 'translateX(-50%)', padding: '4px 14px', borderRadius: 8, background: `${MODEL_LAYERS[Math.min(activeLayer, MODEL_LAYERS.length - 1)].color}22`, border: `1px solid ${MODEL_LAYERS[Math.min(activeLayer, MODEL_LAYERS.length - 1)].color}44` }}>
-          <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: MODEL_LAYERS[Math.min(activeLayer, MODEL_LAYERS.length - 1)].color, fontWeight: 700 }}>
-            ⚡ {activeLayer >= MODEL_LAYERS.length - 1 ? 'Inference complete! → "मुझे भारत पसंद है"' : `Processing: ${MODEL_LAYERS[activeLayer].label}`}
+      {inferStep >= 0 && (
+        <div style={{ position: 'absolute', bottom: 44, left: '50%', transform: 'translateX(-50%)', padding: '4px 12px', borderRadius: 6, background: `${LAYERS[Math.min(inferStep, LAYERS.length - 1)].color}22`, border: `1px solid ${LAYERS[Math.min(inferStep, LAYERS.length - 1)].color}44`, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: LAYERS[Math.min(inferStep, LAYERS.length - 1)].color, fontWeight: 700 }}>
+            ⚡ {inferStep >= LAYERS.length - 1 ? 'Inference complete! → "मुझे भारत पसंद है"' : `Processing: ${LAYERS[inferStep].label}`}
           </span>
         </div>
       )}
