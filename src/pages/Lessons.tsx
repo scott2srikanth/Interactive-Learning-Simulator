@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useUserStore } from '../store/userStore';
 import { Card } from '../components/ui/Card';
@@ -11,8 +11,9 @@ import {
   ContextMeaningDemo, TokenPill, EmbeddingBar, FlowArrow, MatrixGrid,
   AttentionArrows, DotGrid, SoftmaxAnim, ValueWeightedSum,
   QKVProjection, MultiHeadSplit, TransformerBlockAnim, PipelineStep,
-  TokenizationAnim, MaskGridAnim, CrossAttentionFlow, MemoryCube3D, InferencePipeline
+  TokenizationAnim, MaskGridAnim, CrossAttentionFlow, InferencePipeline
 } from '../components/transformer/AnimatedComponents';
+const TransformerMemory3D = lazy(() => import('../components/transformer/TransformerMemory3D'));
 
 /* ═══════════════════════════════════════════════════════════
    VISUAL COMPONENTS FOR LESSONS
@@ -599,32 +600,19 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
         <InfoBox color="green" title="📊 Total Parameters"><p>Embeddings: ~25M · Encoder: 6×(MHA+FFN) ≈ 19M · Decoder: 6×(MMHA+CrossMHA+FFN) ≈ 25M · Linear: ~25M · <b>Total ≈ 65 million parameters</b></p></InfoBox>
       </div>
     )},
-    { id:'tf-13', title:'Transformer in Memory', description:'3D view: how the trained model lives in GPU memory + inference', icon:'🧊', content: (() => {
-      const layers = [
-        { label: 'Token Embedding [50257×512]', color: '#22c55e', desc: 'Lookup table: every word → 512-dim vector', shape: '[50257×512]', params: '25.7M params', w: 200, h: 28 },
-        { label: 'Positional Encoding [512×512]', color: '#06b6d4', desc: 'Sine/cosine waves for 512 positions', shape: '[512×512]', params: '262K (fixed, not learned)', w: 190, h: 24 },
-        { label: 'Encoder Block 1: W_Q,W_K,W_V,W_O', color: '#3b82f6', desc: 'Self-attention weights for encoder layer 1', shape: '4×[512×512]', params: '1.05M', w: 220, h: 26 },
-        { label: 'Encoder Block 1: FFN W1,W2', color: '#60a5fa', desc: 'Feed-forward: [512→2048→512]', shape: '[512×2048]+[2048×512]', params: '2.1M', w: 210, h: 24 },
-        { label: 'Encoder Block 2', color: '#3b82f6', desc: 'Same structure, different learned weights', shape: '4×[512×512]+FFN', params: '3.15M', w: 200, h: 24 },
-        { label: '... Encoder Blocks 3-6', color: '#2563eb', desc: '4 more identical blocks stacked', shape: '×4 blocks', params: '12.6M', w: 180, h: 22 },
-        { label: 'Decoder Block 1: Masked MHA', color: '#a855f7', desc: 'Masked self-attention weights', shape: '4×[512×512]', params: '1.05M', w: 210, h: 26 },
-        { label: 'Decoder Block 1: Cross MHA', color: '#ec4899', desc: 'Cross-attention: decoder→encoder', shape: '4×[512×512]', params: '1.05M', w: 210, h: 24 },
-        { label: 'Decoder Block 1: FFN', color: '#f472b6', desc: 'Feed-forward network', shape: '[512×2048]+[2048×512]', params: '2.1M', w: 200, h: 24 },
-        { label: '... Decoder Blocks 2-6', color: '#7c3aed', desc: '5 more decoder blocks', shape: '×5 blocks', params: '21M', w: 180, h: 22 },
-        { label: 'Linear [512→50257]', color: '#c4b5fd', desc: 'Projects to vocabulary size for prediction', shape: '[512×50257]', params: '25.7M', w: 200, h: 26 },
-        { label: 'Softmax', color: '#86efac', desc: 'No parameters — just math (exp/sum)', shape: 'function', params: '0 params', w: 160, h: 22 },
-      ];
-      return (
-        <div className="space-y-5">
-          <p className="text-gray-700 dark:text-gray-300">Every weight matrix is stored as a giant array of floating-point numbers in <b>GPU memory</b>. Here's what the trained model looks like — hover over each layer:</p>
-          <MemoryCube3D layers={layers} />
-          <InfoBox color="yellow" title="💾 Memory Size"><p>Total: ~65M parameters × 4 bytes (float32) = <b>~260 MB</b> on GPU. With float16: ~130 MB. GPT-3 (175B params): ~700 GB!</p></InfoBox>
-          <p className="text-gray-700 dark:text-gray-300 font-bold">How Inference Works (English→Hindi):</p>
-          <InferencePipeline srcTokens={['I','love','India']} tgtTokens={['मुझे','भारत','पसंद','है']} />
-          <InfoBox color="green" title="🔁 Autoregressive Decoding"><p>The decoder generates ONE token at a time. Each new token is fed back as input for the next step. "मुझे" → "भारत" → "पसंद" → "है" → [END]. The encoder runs ONCE, but the decoder runs T times (one per output token).</p></InfoBox>
-        </div>
-      );
-    })()},
+    { id:'tf-13', title:'Transformer in Memory', description:'3D GPU VRAM view: trained model weights + live inference animation', icon:'🧊', content: (
+      <div className="space-y-5">
+        <p className="text-gray-700 dark:text-gray-300">Every weight matrix is stored as a giant array of floating-point numbers in <b>GPU VRAM</b>. Below is a <b>3D interactive visualization</b> of the trained EN→HI translation model:</p>
+        <Suspense fallback={<div className="text-center py-20"><p className="text-gray-400">Loading 3D visualization...</p></div>}>
+          <TransformerMemory3D />
+        </Suspense>
+        <InfoBox color="yellow" title="💾 What You're Seeing"><p>Each <b>glowing block</b> is a weight matrix stored in GPU memory. The glass box represents the GPU VRAM (~260 MB). Token input packets flow in from the left, get processed through each layer, and prediction probabilities emerge on the right. Click <b>▶ Run Inference</b> to watch data flow through!</p></InfoBox>
+        <InfoBox color="blue" title="📐 Memory Breakdown"><p>Token Embedding: 25.7M · Encoder (6 blocks): ~19M · Decoder (6 blocks): ~25M · Linear: 25.7M · <b>Total: ~65M params × 4 bytes = 260 MB (float32)</b> · GPT-3: 175B params = ~700 GB!</p></InfoBox>
+        <p className="text-gray-700 dark:text-gray-300 font-bold">How Inference Works (English→Hindi):</p>
+        <InferencePipeline srcTokens={['I','love','India']} tgtTokens={['मुझे','भारत','पसंद','है']} />
+        <InfoBox color="green" title="🔁 Autoregressive Decoding"><p>The encoder runs <b>ONCE</b> on all English tokens simultaneously. The decoder runs <b>T times</b> (one per Hindi token): "मुझे" → "भारत" → "पसंद" → "है" → [END]. Each new token is fed back as input for the next step — that's why it's called <b>autoregressive</b>.</p></InfoBox>
+      </div>
+    )},
   ],
 };
 
