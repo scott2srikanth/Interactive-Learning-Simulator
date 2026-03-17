@@ -26,6 +26,7 @@ export function TokenPill({ word, idx, highlight, glow, delay = 0, sub }: { word
 
 // Embedding vector bar — animated fill
 export function EmbeddingBar({ values, label, color = '#3b82f6', delay = 0, height = 40 }: any) {
+  if (!values || !Array.isArray(values) || values.length === 0) return null;
   return (
     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay }}
       style={{ marginBottom: 6 }}>
@@ -288,7 +289,7 @@ export function ContextMeaningDemo({ delay = 0 }: { delay?: number }) {
 }
 
 // QKV projection animation — shows embedding → multiply by W → get Q/K/V
-export function QKVProjection({ embedding, Wq, Wk, Wv, query, key, value, token, delay = 0 }: any) {
+export function QKVProjection({ embedding, query, keyVec, value, token, delay = 0 }: any) {
   const [step, setStep] = useState(0);
   useEffect(() => { const t = setInterval(() => setStep(p => Math.min(p + 1, 3)), 1500); return () => clearInterval(t); }, []);
   return (
@@ -306,7 +307,7 @@ export function QKVProjection({ embedding, Wq, Wk, Wv, query, key, value, token,
         </>}
         {step >= 2 && <>
           <FlowArrow label="× W_K" color="#22c55e" delay={0.4} />
-          <div><EmbeddingBar values={key} label="Key" color="#22c55e" height={30} delay={0.5} /></div>
+          <div><EmbeddingBar values={keyVec} label="Key" color="#22c55e" height={30} delay={0.5} /></div>
         </>}
         {step >= 3 && <>
           <FlowArrow label="× W_V" color="#3b82f6" delay={0.6} />

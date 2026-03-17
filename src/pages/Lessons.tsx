@@ -482,7 +482,7 @@ const ALL_LESSONS: Record<string, Lesson[]> = {
       return (
         <div className="space-y-5">
           <p className="text-gray-700 dark:text-gray-300">Each token's embedding is projected into three vectors via learned weight matrices. Think of <b>Queries</b> as questions a token asks, and <b>Keys</b> as what each token advertises about itself.</p>
-          <QKVProjection embedding={emb} Wq={null} Wk={null} Wv={null} query={q} key={k} value={v} token="creature" />
+          <QKVProjection embedding={emb} query={q} keyVec={k} value={v} token="creature" />
           <InfoBox color="yellow" title="🎯 3B1B Example"><p>Imagine each <b>noun</b> asks: "Are there any adjectives in front of me?" — this question is encoded as the <b>Query</b>. Each adjective advertises "I'm an adjective!" via its <b>Key</b>. When Query and Key align → high attention score.</p></InfoBox>
           <MathBlock formula="Q = E · W_Q    K = E · W_K    V = E · W_V" label="Three separate weight matrices, all learned during training" />
         </div>
