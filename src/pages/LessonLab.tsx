@@ -4,6 +4,9 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Navbar, NavLink } from '../components/ui/Navbar';
 import { ArrowLeft } from 'lucide-react';
+import MoleProblemLab from '../components/transformer/MoleProblemLab';
+
+function MoleProblemLabWrapper() { return <MoleProblemLab />; }
 
 /* ═══════════════════════════════════════════════════════════
    SHARED MATH UTILS
@@ -891,7 +894,7 @@ const LESSON_LABS: Record<string, { title: string; component: React.FC }> = {
   'vae-4': { title: 'Reparameterization Trick', component: ReparamLab },
   'vae-5': { title: 'Loss Calculator', component: ReparamLab },
   'vae-6': { title: 'Interpolation Lab', component: ReparamLab },
-  'tf-1': { title: 'The Mole Problem — Context Changes Meaning', component: ContextMeaningLab },
+  'tf-1': { title: 'The Mole Problem — Attention Mechanism Explorer', component: MoleProblemLabWrapper },
   'tf-2': { title: 'Tokenization Explorer', component: EmbeddingLab },
   'tf-3': { title: 'Token Embedding Explorer', component: EmbeddingLab },
   'tf-4': { title: 'Positional Encoding Visualizer', component: PELab },
