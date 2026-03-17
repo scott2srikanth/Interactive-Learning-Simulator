@@ -1005,6 +1005,185 @@ function ValueOutputLab() {
   );
 }
 
+// tf-8: Masked Self-Attention — causal mask visualization
+function MaskedAttentionLab() {
+  const [sentence, setSentence] = useState('मुझे भारत पसंद है');
+  const tokens = sentence.split(/\s+/).filter(t => t);
+  const n = tokens.length;
+  const softmaxRow = (row: number[]) => { const mx = Math.max(...row); const e = row.map(v => Math.exp(v - mx)); const s = e.reduce((a, b) => a + b, 0); return e.map(v => v / (s || 1)); };
+
+  // Generate scores with causal mask
+  const rawScores = tokens.map((ti, i) => tokens.map((tj, j) => 0.5 + Math.sin(i * 2.3 + j * 1.7) * 0.8 + (i === j ? 0.5 : 0)));
+  const maskedScores = rawScores.map((row, i) => row.map((v, j) => j > i ? -Infinity : v));
+  const attn = maskedScores.map(r => softmaxRow(r.map(v => v === -Infinity ? -1e9 : v)));
+  const [selRow, setSelRow] = useState(0);
+  const [showMask, setShowMask] = useState(true);
+
+  return (
+    <div className="space-y-4">
+      <div><label className="text-xs text-gray-600 dark:text-gray-400">Target sentence (decoder input):</label>
+        <input value={sentence} onChange={e => setSentence(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600" />
+      </div>
+
+      <div className="flex gap-2">
+        <button onClick={() => setShowMask(true)} className={`px-3 py-1.5 rounded text-xs font-bold ${showMask ? 'bg-amber-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>🎭 Show Mask</button>
+        <button onClick={() => setShowMask(false)} className={`px-3 py-1.5 rounded text-xs font-bold ${!showMask ? 'bg-purple-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>📊 Show Weights</button>
+      </div>
+
+      {/* Mask / Weights grid */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">{showMask ? '🎭 Causal Mask — ✓ = can see, ✗ = blocked (future tokens)' : '📊 Attention weights after masking + softmax'}</p>
+        <div className="overflow-x-auto">
+          <div className="inline-grid gap-1" style={{ gridTemplateColumns: `50px repeat(${n}, 48px)` }}>
+            <div />{tokens.map((t, j) => <div key={j} className="text-center text-xs font-bold text-amber-500 truncate">{t.slice(0, 5)}</div>)}
+            {tokens.map((t, i) => (<React.Fragment key={i}>
+              <div className="text-xs font-bold text-amber-500 text-right pr-1 self-center cursor-pointer" onClick={() => setSelRow(i)} style={{ textDecoration: selRow === i ? 'underline' : 'none' }}>{t.slice(0, 5)}</div>
+              {tokens.map((_, j) => {
+                const allowed = j <= i;
+                if (showMask) {
+                  return <div key={j} className="h-9 rounded flex items-center justify-center text-sm font-bold transition-all" style={{
+                    background: allowed ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.15)',
+                    color: allowed ? '#22c55e' : '#ef4444',
+                    border: `1px solid ${allowed ? '#22c55e44' : '#ef444444'}`
+                  }}>{allowed ? '✓' : '✗'}</div>;
+                } else {
+                  const v = attn[i]?.[j] || 0;
+                  return <div key={j} className="h-9 rounded flex items-center justify-center text-xs font-mono font-bold transition-all" style={{
+                    background: allowed ? `rgba(168,85,247,${v * 0.85 + 0.05})` : 'rgba(239,68,68,0.05)',
+                    color: allowed && v > 0.1 ? '#fff' : '#64748b',
+                    border: selRow === i ? '2px solid #facc15' : '1px solid transparent'
+                  }}>{allowed ? `${(v * 100).toFixed(0)}%` : '0%'}</div>;
+                }
+              })}
+            </React.Fragment>))}
+          </div>
+        </div>
+      </div>
+
+      {/* Selected row detail */}
+      <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">"{tokens[Math.min(selRow, n - 1)]}" can attend to:</p>
+        {tokens.map((t, j) => {
+          const sr = Math.min(selRow, n - 1);
+          const allowed = j <= sr;
+          const w = attn[sr]?.[j] || 0;
+          return <div key={j} className="flex items-center gap-2 mb-1">
+            <span className="text-xs w-14 text-right font-mono" style={{ color: allowed ? '#a855f7' : '#ef4444' }}>{t.slice(0, 5)}</span>
+            <span className="text-xs w-6" style={{ color: allowed ? '#22c55e' : '#ef4444' }}>{allowed ? '✓' : '✗'}</span>
+            <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 160 }}>
+              <div className="h-full rounded transition-all duration-500" style={{ width: `${(allowed ? w : 0) * 100}%`, background: allowed ? '#a855f7' : '#ef4444' }} />
+            </div>
+            <span className="text-xs w-10 font-mono text-gray-500">{allowed ? `${(w * 100).toFixed(0)}%` : 'blocked'}</span>
+          </div>;
+        })}
+      </div>
+
+      <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+        <p className="text-xs text-gray-700 dark:text-gray-300"><b>Why mask?</b> During training, the decoder sees the full target sentence. Without masking, token 3 could "cheat" by looking at token 4 (the answer). The causal mask forces each token to only attend to past tokens — just like during inference when future tokens don't exist yet.</p>
+      </div>
+    </div>
+  );
+}
+
+// tf-9: Cross-Attention — decoder attends to encoder
+function CrossAttentionLab() {
+  const presets = [
+    { en: 'I love India', enT: ['I', 'love', 'India'], hi: 'मुझे भारत पसंद है', hiT: ['मुझे', 'भारत', 'पसंद', 'है'] },
+    { en: 'She reads books', enT: ['She', 'reads', 'books'], hi: 'वह किताबें पढ़ती है', hiT: ['वह', 'किताबें', 'पढ़ती', 'है'] },
+  ];
+  const [sel, setSel] = useState(0);
+  const d = presets[sel];
+  const nE = d.enT.length, nD = d.hiT.length;
+
+  // Simulated cross-attention weights (decoder queries → encoder keys)
+  const crossAttn = d.hiT.map((ht, i) => {
+    const raw = d.enT.map((et, j) => 0.3 + Math.sin((i + 1) * (j + 1) * 1.3) * 0.5 + (i === j || (i === 0 && j === 0) ? 1.2 : 0));
+    const mx = Math.max(...raw); const e = raw.map(v => Math.exp(v - mx)); const s = e.reduce((a, b) => a + b, 0);
+    return e.map(v => v / (s || 1));
+  });
+
+  const [selDec, setSelDec] = useState(0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">{presets.map((p, i) => (
+        <button key={i} onClick={() => { setSel(i); setSelDec(0); }} className={`px-3 py-1.5 rounded text-xs font-bold ${sel === i ? 'bg-pink-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
+          {p.en} → {p.hi}
+        </button>
+      ))}</div>
+
+      {/* Key difference explanation */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="flex-1 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+          <p className="text-xs font-bold text-purple-600 dark:text-purple-400">🔴 Queries from DECODER (Hindi)</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Each Hindi token asks: "Which English word am I translating?"</p>
+        </div>
+        <div className="flex-1 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <p className="text-xs font-bold text-green-600 dark:text-green-400">🟢 Keys + Values from ENCODER (English)</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">English tokens provide context and meaning through K and V.</p>
+        </div>
+      </div>
+
+      {/* Cross-attention heatmap (RECTANGULAR — not square!) */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">📊 Cross-Attention Heatmap [{nD}×{nE}] — NOT square! (rows=Hindi, cols=English)</p>
+        <div className="overflow-x-auto">
+          <div className="inline-grid gap-1" style={{ gridTemplateColumns: `55px repeat(${nE}, 56px)` }}>
+            <div />{d.enT.map((t, j) => <div key={j} className="text-center text-xs font-bold text-green-500">{t}</div>)}
+            {d.hiT.map((t, i) => (<React.Fragment key={i}>
+              <div className="text-xs font-bold text-purple-500 text-right pr-1 self-center cursor-pointer" onClick={() => setSelDec(i)} style={{ textDecoration: selDec === i ? 'underline' : 'none' }}>{t}</div>
+              {d.enT.map((_, j) => {
+                const v = crossAttn[i]?.[j] || 0;
+                const isMax = v === Math.max(...(crossAttn[i] || [0]));
+                return <div key={j} className="h-10 rounded flex items-center justify-center text-xs font-mono font-bold transition-all" style={{
+                  background: `rgba(236,72,153,${v * 0.85 + 0.05})`,
+                  color: v > 0.15 ? '#fff' : '#94a3b8',
+                  border: isMax ? '2px solid #facc15' : selDec === i ? '1px solid #ec489966' : '1px solid transparent'
+                }}>{(v * 100).toFixed(0)}%</div>;
+              })}
+            </React.Fragment>))}
+          </div>
+        </div>
+      </div>
+
+      {/* Selected decoder token detail */}
+      <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+          <span className="text-purple-500 font-bold">"{d.hiT[selDec]}"</span> attends to English tokens:
+        </p>
+        {d.enT.map((t, j) => {
+          const w = crossAttn[selDec]?.[j] || 0;
+          const isMax = w === Math.max(...(crossAttn[selDec] || [0]));
+          return <div key={j} className="flex items-center gap-2 mb-1">
+            <span className="text-xs w-14 text-right font-mono text-green-500 font-bold">{t}</span>
+            <div className="flex-1 h-5 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 180 }}>
+              <div className="h-full rounded transition-all duration-500" style={{ width: `${w * 100}%`, background: isMax ? '#facc15' : '#ec4899' }} />
+            </div>
+            <span className="text-xs w-10 font-mono" style={{ color: isMax ? '#facc15' : '#94a3b8' }}>{(w * 100).toFixed(0)}%</span>
+            {isMax && <span className="text-xs text-yellow-500 font-bold">← strongest</span>}
+          </div>;
+        })}
+      </div>
+
+      {/* Translation connections */}
+      <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg border border-pink-200 dark:border-pink-800">
+        <p className="text-xs font-bold text-pink-600 dark:text-pink-400 mb-2">🔗 Strongest Connections:</p>
+        {d.hiT.map((ht, i) => {
+          const maxJ = crossAttn[i].indexOf(Math.max(...crossAttn[i]));
+          return <p key={i} className="text-xs text-gray-700 dark:text-gray-300">
+            <span className="text-purple-500 font-bold">{ht}</span> ← <span className="text-green-500 font-bold">{d.enT[maxJ]}</span>
+            <span className="text-yellow-500 ml-1">({(crossAttn[i][maxJ] * 100).toFixed(0)}%)</span>
+          </p>;
+        })}
+      </div>
+
+      <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+        <p className="text-xs text-gray-700 dark:text-gray-300"><b>Key difference from self-attention:</b> In self-attention, Q/K/V all come from the SAME tokens. In cross-attention, Q comes from the <b className="text-purple-500">decoder</b> but K and V come from the <b className="text-green-500">encoder</b>. This is how the decoder "reads" the source sentence to translate it!</p>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    LESSON LAB MAPPING
    ═══════════════════════════════════════════════════════════ */
@@ -1040,8 +1219,8 @@ const LESSON_LABS: Record<string, { title: string; component: React.FC }> = {
   'tf-5': { title: 'Query, Key, Value Projections', component: SelfAttentionLab },
   'tf-6': { title: 'Attention Scores & Softmax', component: AttentionPatternLab },
   'tf-7': { title: 'Value Weighted Sum', component: ValueOutputLab },
-  'tf-8': { title: 'Masked Attention Viewer', component: AttentionPatternLab },
-  'tf-9': { title: 'Cross-Attention Explorer', component: AttentionPatternLab },
+  'tf-8': { title: 'Masked Attention Viewer', component: MaskedAttentionLab },
+  'tf-9': { title: 'Cross-Attention Explorer', component: CrossAttentionLab },
   'tf-10': { title: 'Multi-Head Attention Viewer', component: MultiHeadLab },
   'tf-11': { title: 'Feed-Forward Network', component: TransformerBlockLab },
   'tf-12': { title: 'Transformer Block Pipeline', component: TransformerBlockLab },
