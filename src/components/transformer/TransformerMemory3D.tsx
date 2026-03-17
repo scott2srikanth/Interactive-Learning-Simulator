@@ -22,6 +22,14 @@ function rgba(hex: string, a: number) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
+function drawRR(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+
 export default function TransformerMemory3D() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [rotY, setRotY] = useState(28);
@@ -383,7 +391,7 @@ export default function TransformerMemory3D() {
               const blockAlpha = 0.3 + Math.sin(t * 3 + b) * 0.2;
               ctx.fillStyle = rgba(slab.color, blockAlpha);
               ctx.strokeStyle = rgba(slab.color, blockAlpha + 0.2); ctx.lineWidth = 1;
-              ctx.beginPath(); ctx.roundRect(bp.sx - bw / 2, bp.sy - bh2 / 2, bw, bh2, 3); ctx.fill(); ctx.stroke();
+              drawRR(ctx, bp.sx - bw / 2, bp.sy - bh2 / 2, bw, bh2, 3); ctx.fill(); ctx.stroke();
               ctx.fillStyle = rgba('#fff', blockAlpha); ctx.font = `bold ${6 * bp.s}px "JetBrains Mono", monospace`;
               ctx.textAlign = 'center'; ctx.fillText(`Layer ${b + 1}`, bp.sx, bp.sy + 2);
             }
@@ -482,7 +490,7 @@ export default function TransformerMemory3D() {
         const p = proj(xOff, -60 + i * 20, 0);
         ctx.fillStyle = rgba('#22c55e', 0.2); ctx.strokeStyle = rgba('#22c55e', 0.6); ctx.lineWidth = 1.5;
         ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 8;
-        ctx.beginPath(); ctx.roundRect(p.sx - 25, p.sy - 10, 50, 20, 6); ctx.fill(); ctx.stroke();
+        drawRR(ctx, p.sx - 25, p.sy - 10, 50, 20, 6); ctx.fill(); ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#22c55e'; ctx.font = `bold ${11 * p.s}px "JetBrains Mono", monospace`;
         ctx.textAlign = 'center'; ctx.fillText(tok, p.sx, p.sy + 4);
@@ -493,7 +501,7 @@ export default function TransformerMemory3D() {
         const xOff = -340 - i * 45;
         const p = proj(xOff, -30 + i * 25, 0);
         ctx.fillStyle = rgba('#22c55e', 0.15); ctx.strokeStyle = rgba('#22c55e', 0.4); ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.roundRect(p.sx - 20, p.sy - 8, 40, 16, 4); ctx.fill(); ctx.stroke();
+        drawRR(ctx, p.sx - 20, p.sy - 8, 40, 16, 4); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#22c55e'; ctx.font = `bold ${9 * p.s}px "JetBrains Mono", monospace`;
         ctx.textAlign = 'center'; ctx.fillText(tok, p.sx, p.sy + 3);
       });
