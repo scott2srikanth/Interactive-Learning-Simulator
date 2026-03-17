@@ -430,7 +430,146 @@ function TFComparisonLab() {
   );
 }
 
-// tf-2: Embedding Viewer
+// tf-2: Tokenization Explorer — how text becomes token IDs
+function TokenizationLab() {
+  const [inputText, setInputText] = useState('I love India');
+  const [showStep, setShowStep] = useState(0);
+  const presets = [
+    { text: 'I love India', hint: 'Simple 3-word sentence' },
+    { text: 'मुझे भारत पसंद है', hint: 'Hindi target sentence' },
+    { text: 'unbelievably extraordinary', hint: 'Long words get split into subwords' },
+    { text: "She doesn't like rainy days", hint: 'Contractions and common words' },
+  ];
+
+  // Simulate tokenization — split into words/subwords
+  const tokenize = (text: string) => {
+    const words = text.split(/\s+/).filter(t => t);
+    const result: { token: string; isSubword: boolean; originalWord: string }[] = [];
+    words.forEach(word => {
+      if (word.length > 8) {
+        // Simulate subword splitting for long words
+        const mid = Math.ceil(word.length * 0.55);
+        result.push({ token: word.slice(0, mid), isSubword: false, originalWord: word });
+        result.push({ token: '##' + word.slice(mid), isSubword: true, originalWord: word });
+      } else {
+        result.push({ token: word, isSubword: false, originalWord: word });
+      }
+    });
+    return result;
+  };
+
+  const tokens = tokenize(inputText);
+  // Generate deterministic token IDs from char codes
+  const tokenIds = tokens.map(t => {
+    let hash = 0;
+    for (let i = 0; i < t.token.length; i++) hash = ((hash << 5) - hash + t.token.charCodeAt(i)) & 0xFFFF;
+    return Math.abs(hash) % 50257;
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Input */}
+      <div>
+        <label className="text-xs text-gray-600 dark:text-gray-400 font-bold">Type a sentence or pick a preset:</label>
+        <input value={inputText} onChange={e => { setInputText(e.target.value); setShowStep(0); }}
+          className="w-full mt-1 px-3 py-2 rounded-lg text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600" />
+        <div className="flex gap-2 mt-2 flex-wrap">
+          {presets.map((p, i) => (
+            <button key={i} onClick={() => { setInputText(p.text); setShowStep(0); }}
+              className={`px-3 py-1 rounded text-xs font-bold ${inputText === p.text ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
+              {p.text.slice(0, 20)}{p.text.length > 20 ? '...' : ''}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Step controls */}
+      <div className="flex gap-2">
+        {['1. Raw Text', '2. Split into Tokens', '3. Assign Token IDs', '4. Ready for Embedding'].map((label, i) => (
+          <button key={i} onClick={() => setShowStep(i)}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${showStep === i ? 'bg-green-600 text-white' : showStep > i ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Step 0: Raw text */}
+      {showStep >= 0 && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">Raw input string:</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white font-mono">"{inputText}"</p>
+          <p className="text-xs text-gray-400 mt-1">{inputText.length} characters</p>
+        </div>
+      )}
+
+      {/* Step 1: Split into tokens */}
+      {showStep >= 1 && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">Tokenized ({tokens.length} tokens):</p>
+          <div className="flex gap-2 flex-wrap">
+            {tokens.map((t, i) => (
+              <div key={i} className="text-center">
+                <div className={`px-3 py-2 rounded-lg text-sm font-bold font-mono ${t.isSubword ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700'}`}>
+                  {t.token}
+                </div>
+                {t.isSubword && <p className="text-xs text-amber-500 mt-1">subword</p>}
+              </div>
+            ))}
+          </div>
+          {tokens.some(t => t.isSubword) && (
+            <p className="text-xs text-amber-500 mt-3">⚠️ Long words are split into subwords (prefix ## marks continuation). This is how models handle unknown/rare words!</p>
+          )}
+        </div>
+      )}
+
+      {/* Step 2: Token IDs */}
+      {showStep >= 2 && (
+        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">Each token → unique integer ID from vocabulary (size 50,257):</p>
+          <div className="space-y-2">
+            {tokens.map((t, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="text-xs font-bold text-green-600 dark:text-green-400 w-24 text-right font-mono">"{t.token}"</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 font-mono bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">ID: {tokenIds[i]}</span>
+                <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden" style={{ maxWidth: 100 }}>
+                  <div className="h-full bg-blue-500 rounded" style={{ width: `${(tokenIds[i] / 50257) * 100}%` }} />
+                </div>
+                <span className="text-xs text-gray-400 font-mono">{((tokenIds[i] / 50257) * 100).toFixed(1)}% of vocab</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Ready for embedding */}
+      {showStep >= 3 && (
+        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <p className="text-xs font-bold text-green-700 dark:text-green-400 mb-2">✅ Token IDs ready for the Embedding layer!</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Each ID will be used to look up a 512-dimensional vector from the embedding matrix [50,257 × 512].</p>
+          <div className="flex items-center gap-2 flex-wrap font-mono text-sm">
+            <span className="text-gray-500">[</span>
+            {tokenIds.map((id, i) => (
+              <span key={i}>
+                <span className="font-bold text-blue-600 dark:text-blue-400">{id}</span>
+                {i < tokenIds.length - 1 && <span className="text-gray-400">, </span>}
+              </span>
+            ))}
+            <span className="text-gray-500">]</span>
+            <span className="text-gray-400 text-xs ml-2">→ Embedding Layer → [{tokens.length} × 512] matrix</span>
+          </div>
+        </div>
+      )}
+
+      {/* Info */}
+      <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+        <p className="text-xs text-gray-700 dark:text-gray-300"><b>Key points:</b> Tokenization is the FIRST step. The model never sees raw text — only integer IDs. Different tokenizers (BPE, WordPiece, SentencePiece) split text differently. GPT-2 uses Byte-Pair Encoding with 50,257 tokens.</p>
+      </div>
+    </div>
+  );
+}
+
+// tf-3: Embedding Viewer
 function EmbeddingLab() {
   const [inputText, setInputText] = useState('king queen man woman');
   const tokens = inputText.toLowerCase().split(/\s+/).filter(t => t);
@@ -895,7 +1034,7 @@ const LESSON_LABS: Record<string, { title: string; component: React.FC }> = {
   'vae-5': { title: 'Loss Calculator', component: ReparamLab },
   'vae-6': { title: 'Interpolation Lab', component: ReparamLab },
   'tf-1': { title: 'The Mole Problem — Attention Mechanism Explorer', component: MoleProblemLabWrapper },
-  'tf-2': { title: 'Tokenization Explorer', component: EmbeddingLab },
+  'tf-2': { title: 'Tokenization Explorer', component: TokenizationLab },
   'tf-3': { title: 'Token Embedding Explorer', component: EmbeddingLab },
   'tf-4': { title: 'Positional Encoding Visualizer', component: PELab },
   'tf-5': { title: 'Query, Key, Value Projections', component: SelfAttentionLab },
