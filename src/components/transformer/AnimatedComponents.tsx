@@ -277,40 +277,204 @@ export function CrossAttentionFlow({ encTokens, decTokens, connections, delay = 
   );
 }
 
-/* ═══ NEW: 3D Memory Cube ═══ */
+/* ═══ 3D MODEL MEMORY VISUALIZATION — Canvas rendered ═══ */
 export function MemoryCube3D({ layers, delay = 0 }: any) {
-  const [rotY, setRotY] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [rotX, setRotX] = useState(-20);
+  const [rotY, setRotY] = useState(25);
+  const [zoom, setZoom] = useState(1);
   const [hovered, setHovered] = useState(-1);
-  useEffect(() => { const t = setInterval(() => setRotY(p => p + 0.3), 50); return () => clearInterval(t); }, []);
+  const [dragging, setDragging] = useState(false);
+  const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 });
+  const [inferStep, setInferStep] = useState(-1);
+  const [autoInfer, setAutoInfer] = useState(false);
+
+  const W = 600, H = 480;
+  const n = layers.length;
+
+  // 3D projection
+  const project = (x: number, y: number, z: number) => {
+    const radY = (rotY * Math.PI) / 180, radX = (rotX * Math.PI) / 180;
+    let x1 = x * Math.cos(radY) - z * Math.sin(radY);
+    let z1 = x * Math.sin(radY) + z * Math.cos(radY);
+    let y1 = y * Math.cos(radX) - z1 * Math.sin(radX);
+    let z2 = y * Math.sin(radX) + z1 * Math.cos(radX);
+    const scale = (500 * zoom) / (500 + z2);
+    return { x: W / 2 + x1 * scale, y: H / 2 + y1 * scale, scale, z: z2 };
+  };
+
+  // Draw
+  useEffect(() => {
+    const c = canvasRef.current; if (!c) return;
+    c.width = W * 2; c.height = H * 2;
+    const ctx = c.getContext('2d')!;
+    ctx.scale(2, 2);
+    ctx.clearRect(0, 0, W, H);
+
+    // Background grid
+    ctx.strokeStyle = '#1e293b33';
+    ctx.lineWidth = 0.5;
+    for (let i = -200; i <= 200; i += 40) {
+      const p1 = project(i, 160, -200), p2 = project(i, 160, 200);
+      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+      const p3 = project(-200, 160, i), p4 = project(200, 160, i);
+      ctx.beginPath(); ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.stroke();
+    }
+
+    // Sort layers by z-depth for painter's algorithm
+    const layerData = layers.map((layer: any, i: number) => {
+      const yPos = 140 - i * 26;
+      const w = (layer.w || 160) * 0.7;
+      const h = 18;
+      const d = 50;
+      // 8 corners of a box
+      const corners = [
+        project(-w/2, yPos, -d/2), project(w/2, yPos, -d/2),
+        project(w/2, yPos, d/2), project(-w/2, yPos, d/2),
+        project(-w/2, yPos - h, -d/2), project(w/2, yPos - h, -d/2),
+        project(w/2, yPos - h, d/2), project(-w/2, yPos - h, d/2),
+      ];
+      const avgZ = corners.reduce((s, c) => s + c.z, 0) / 8;
+      return { layer, i, yPos, w, h, d, corners, avgZ };
+    });
+
+    layerData.sort((a: any, b: any) => b.avgZ - a.avgZ);
+
+    layerData.forEach(({ layer, i: idx, corners }: any) => {
+      const isHov = hovered === idx;
+      const isInfer = inferStep >= 0 && idx <= inferStep;
+      const color = layer.color || '#3b82f6';
+      const alpha = isHov ? 'cc' : isInfer ? 'aa' : '66';
+
+      // Top face
+      ctx.fillStyle = color + alpha;
+      ctx.beginPath();
+      ctx.moveTo(corners[4].x, corners[4].y); ctx.lineTo(corners[5].x, corners[5].y);
+      ctx.lineTo(corners[6].x, corners[6].y); ctx.lineTo(corners[7].x, corners[7].y);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = isHov ? '#fff' : color + '88'; ctx.lineWidth = isHov ? 2 : 0.8; ctx.stroke();
+
+      // Front face
+      ctx.fillStyle = color + (isHov ? 'bb' : isInfer ? '88' : '44');
+      ctx.beginPath();
+      ctx.moveTo(corners[0].x, corners[0].y); ctx.lineTo(corners[1].x, corners[1].y);
+      ctx.lineTo(corners[5].x, corners[5].y); ctx.lineTo(corners[4].x, corners[4].y);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      // Right face
+      ctx.fillStyle = color + (isHov ? '99' : isInfer ? '66' : '33');
+      ctx.beginPath();
+      ctx.moveTo(corners[1].x, corners[1].y); ctx.lineTo(corners[2].x, corners[2].y);
+      ctx.lineTo(corners[6].x, corners[6].y); ctx.lineTo(corners[5].x, corners[5].y);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      // Label on top face
+      const cx = (corners[4].x + corners[5].x + corners[6].x + corners[7].x) / 4;
+      const cy = (corners[4].y + corners[5].y + corners[6].y + corners[7].y) / 4;
+      ctx.fillStyle = isHov ? '#fff' : '#e2e8f0cc';
+      ctx.font = `bold ${Math.max(8, 10 * corners[4].scale)}px JetBrains Mono, monospace`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const labelText = layer.label.length > 22 ? layer.label.slice(0, 20) + '..' : layer.label;
+      ctx.fillText(labelText, cx, cy);
+
+      // Inference glow
+      if (isInfer && inferStep === idx) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(corners[4].x, corners[4].y); ctx.lineTo(corners[5].x, corners[5].y);
+        ctx.lineTo(corners[6].x, corners[6].y); ctx.lineTo(corners[7].x, corners[7].y);
+        ctx.closePath(); ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Wireframe connection to next layer (inference flow)
+      if (isInfer && idx < n - 1 && inferStep > idx) {
+        const nextIdx = idx + 1;
+        const nextY = 140 - nextIdx * 26;
+        const p1 = project(0, nextY + 18, 0);
+        const p2 = project(0, nextY + 18 + 8, 0);
+        ctx.strokeStyle = '#facc1588';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(cx, cy + 6); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    });
+
+  }, [layers, rotX, rotY, zoom, hovered, inferStep, n]);
+
+  // Mouse handlers
+  const onMouseDown = (e: any) => { setDragging(true); setLastMouse({ x: e.clientX, y: e.clientY }); };
+  const onMouseMove = (e: any) => {
+    if (!dragging) {
+      // Hover detection
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const scaleX = W / rect.width, scaleY = H / rect.height;
+      let found = -1;
+      for (let i = 0; i < n; i++) {
+        const yPos = 140 - i * 26;
+        const p = project(0, yPos - 9, 0);
+        if (Math.abs(mx * scaleX - p.x) < 80 && Math.abs(my * scaleY - p.y) < 14) { found = i; break; }
+      }
+      setHovered(found);
+      return;
+    }
+    const dx = e.clientX - lastMouse.x, dy = e.clientY - lastMouse.y;
+    setRotY(prev => prev + dx * 0.5);
+    setRotX(prev => Math.max(-60, Math.min(30, prev + dy * 0.5)));
+    setLastMouse({ x: e.clientX, y: e.clientY });
+  };
+  const onMouseUp = () => setDragging(false);
+  const onWheel = (e: any) => { e.preventDefault(); setZoom(prev => Math.max(0.4, Math.min(2.5, prev - e.deltaY * 0.001))); };
+
+  // Auto inference
+  useEffect(() => {
+    if (autoInfer && inferStep < n - 1) {
+      const t = setTimeout(() => setInferStep(p => p + 1), 600);
+      return () => clearTimeout(t);
+    } else if (inferStep >= n - 1) setAutoInfer(false);
+  }, [autoInfer, inferStep, n]);
 
   return (
-    <div style={{ perspective: 800, width: 400, height: 350, margin: '0 auto', position: 'relative' }}>
-      <div style={{ transformStyle: 'preserve-3d', transform: `rotateY(${rotY}deg) rotateX(-15deg)`, width: '100%', height: '100%', position: 'relative' }}>
-        {layers.map((layer: any, i: number) => {
-          const z = -i * 28;
-          const isHov = hovered === i;
-          return (
-            <motion.div key={i} initial={{ opacity: 0, z: -100 }} animate={{ opacity: 1 }}
-              transition={{ delay: delay + i * 0.1 }}
-              onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(-1)}
-              style={{
-                position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%, -50%) translateZ(${z}px) ${isHov ? 'scale(1.08)' : ''}`,
-                width: layer.w || 180, height: layer.h || 24, borderRadius: 6,
-                background: isHov ? layer.color : `${layer.color}88`, border: `1.5px solid ${layer.color}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 9, fontFamily: F.mono, fontWeight: 700, color: '#fff',
-                boxShadow: isHov ? `0 0 20px ${layer.color}66` : 'none', cursor: 'pointer', transition: 'all 0.2s'
-              }}>
-              {layer.label}
-            </motion.div>
-          );
-        })}
+    <div style={{ position: 'relative' }}>
+      <canvas ref={canvasRef} style={{ width: W, height: H, borderRadius: 12, border: '1px solid #1e293b', cursor: dragging ? 'grabbing' : 'grab', display: 'block', margin: '0 auto', maxWidth: '100%' }}
+        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onWheel={onWheel} />
+
+      {/* Controls */}
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 8 }}>
+        <button onClick={() => { setInferStep(-1); setTimeout(() => { setInferStep(0); setAutoInfer(true); }, 100); }}
+          style={{ padding: '5px 14px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: autoInfer ? '#dc2626' : '#16a34a', color: '#fff', border: 'none', cursor: 'pointer' }}>
+          {autoInfer ? '⏸ Pause' : '▶ Run Inference'}
+        </button>
+        <button onClick={() => { setInferStep(-1); setAutoInfer(false); }} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 10, background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', cursor: 'pointer' }}>↺ Reset</button>
+        <button onClick={() => setZoom(1)} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 10, background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', cursor: 'pointer' }}>⊙ Reset View</button>
       </div>
+
+      <p style={{ textAlign: 'center', fontSize: 8, color: '#475569', marginTop: 4, fontFamily: F.mono }}>🖱️ Drag to rotate · Scroll to zoom · Hover for details · ▶ to animate inference</p>
+
+      {/* Hover info */}
       {hovered >= 0 && layers[hovered] && (
-        <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, textAlign: 'center', padding: '8px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.8)', margin: '0 20px' }}>
-          <p style={{ fontSize: 11, fontFamily: F.mono, color: layers[hovered].color, fontWeight: 700 }}>{layers[hovered].label}</p>
-          <p style={{ fontSize: 9, color: '#94a3b8' }}>{layers[hovered].desc}</p>
-          <p style={{ fontSize: 9, color: '#f59e0b', fontFamily: F.mono }}>{layers[hovered].shape} · {layers[hovered].params}</p>
+        <div style={{ position: 'absolute', top: 12, right: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(0,0,0,0.9)', border: `1.5px solid ${layers[hovered].color}`, maxWidth: 260, zIndex: 10 }}>
+          <p style={{ fontSize: 12, fontFamily: F.mono, color: layers[hovered].color, fontWeight: 700, marginBottom: 4 }}>{layers[hovered].label}</p>
+          <p style={{ fontSize: 10, color: '#c8d6e5', marginBottom: 4 }}>{layers[hovered].desc}</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <span style={{ fontSize: 9, color: '#f59e0b', fontFamily: F.mono }}>Shape: {layers[hovered].shape}</span>
+            <span style={{ fontSize: 9, color: '#22c55e', fontFamily: F.mono }}>{layers[hovered].params}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Inference step label */}
+      {inferStep >= 0 && inferStep < n && (
+        <div style={{ textAlign: 'center', marginTop: 6, padding: '4px 12px', borderRadius: 6, background: `${layers[inferStep].color}22`, border: `1px solid ${layers[inferStep].color}44`, display: 'inline-block', marginLeft: '50%', transform: 'translateX(-50%)' }}>
+          <span style={{ fontSize: 10, fontFamily: F.mono, color: layers[inferStep].color, fontWeight: 700 }}>
+            ⚡ Data flowing through: {layers[inferStep].label}
+          </span>
         </div>
       )}
     </div>
