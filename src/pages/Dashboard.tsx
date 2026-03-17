@@ -13,7 +13,7 @@ const TOPIC_INFO: Record<string, { prefix: string; count: number; color: string;
   ann: { prefix: 'ann-', count: 6, color: 'blue', icon: '🧠' },
   rnn: { prefix: 'rnn-', count: 6, color: 'orange', icon: '🔄' },
   vae: { prefix: 'vae-', count: 6, color: 'pink', icon: '✨' },
-  transformers: { prefix: 'tf-', count: 6, color: 'violet', icon: '⚡' },
+  transformers: { prefix: 'tf-', count: 8, color: 'violet', icon: '⚡' },
 };
 
 export const Dashboard: React.FC = () => {
@@ -33,7 +33,7 @@ export const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
             { label: 'Level', val: level, icon: <Star className="w-10 h-10 text-blue-600 dark:text-blue-400" />, color: 'blue' },
-            { label: 'Lessons', val: `${completedLessons.length}/30`, icon: <BookOpen className="w-10 h-10 text-green-600 dark:text-green-400" />, color: 'green' },
+            { label: 'Lessons', val: `${completedLessons.length}/32`, icon: <BookOpen className="w-10 h-10 text-green-600 dark:text-green-400" />, color: 'green' },
             { label: 'Badges', val: `${earnedBadges.length}/${badges.length}`, icon: <Trophy className="w-10 h-10 text-yellow-500" />, color: 'yellow' },
             { label: 'Challenges', val: `${completedChallenges.length}/${challenges.length}`, icon: <Target className="w-10 h-10 text-purple-600 dark:text-purple-400" />, color: 'purple' },
           ].map((s, i) => (

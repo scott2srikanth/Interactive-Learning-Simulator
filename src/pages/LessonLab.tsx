@@ -686,6 +686,8 @@ const LESSON_LABS: Record<string, { title: string; component: React.FC }> = {
   'tf-4': { title: 'Self-Attention Q,K,V', component: SelfAttentionLab },
   'tf-5': { title: 'Multi-Head Attention', component: MultiHeadLab },
   'tf-6': { title: 'Transformer Block', component: TransformerBlockLab },
+  'tf-7': { title: 'Multi-Head Attention', component: MultiHeadLab },
+  'tf-8': { title: 'Transformer Block Pipeline', component: TransformerBlockLab },
 };
 
 /* ═══════════════════════════════════════════════════════════
