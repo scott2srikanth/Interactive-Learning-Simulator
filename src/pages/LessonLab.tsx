@@ -652,6 +652,173 @@ function TransformerBlockLab() {
   );
 }
 
+// tf-1: Context changes meaning — interactive "mole" demo
+function ContextMeaningLab() {
+  const examples = [
+    { sentence: 'American shrew mole', words: ['American', 'shrew', 'mole'], focus: 2, meaning: 'Small burrowing mammal', emoji: '🐾', color: '#22c55e' },
+    { sentence: 'One mole of carbon dioxide', words: ['One', 'mole', 'of', 'carbon', 'dioxide'], focus: 1, meaning: '6.022 × 10²³ particles (Avogadro)', emoji: '⚗️', color: '#3b82f6' },
+    { sentence: 'Take a biopsy of the mole', words: ['Take', 'a', 'biopsy', 'of', 'the', 'mole'], focus: 5, meaning: 'Skin growth / lesion', emoji: '🏥', color: '#f59e0b' },
+  ];
+  const [sel, setSel] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  useEffect(() => { setShowResult(false); const t = setTimeout(() => setShowResult(true), 600); return () => clearTimeout(t); }, [sel]);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-700 dark:text-gray-300">The word <b>"mole"</b> has the <b>same initial embedding</b> in all 3 sentences. Click each to see how attention updates its meaning:</p>
+      <div className="flex gap-2 flex-wrap">{examples.map((ex, i) => (
+        <button key={i} onClick={() => setSel(i)} className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${sel === i ? 'text-white scale-105' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`} style={sel === i ? { background: ex.color } : {}}>
+          {ex.emoji} {ex.sentence}
+        </button>
+      ))}</div>
+      <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg">
+        <div className="flex gap-2 flex-wrap mb-4">{examples[sel].words.map((w, i) => (
+          <div key={i} className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${i === examples[sel].focus ? 'text-white scale-110' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+            style={i === examples[sel].focus ? { background: examples[sel].color, boxShadow: `0 0 15px ${examples[sel].color}66` } : {}}>
+            {w}
+          </div>
+        ))}</div>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded">
+            <div className="h-1 rounded transition-all duration-700" style={{ width: showResult ? '100%' : '0%', background: examples[sel].color }} />
+          </div>
+        </div>
+        {showResult && (
+          <div className="mt-3 p-3 rounded-lg" style={{ background: `${examples[sel].color}15`, border: `1px solid ${examples[sel].color}33` }}>
+            <p className="text-xs text-gray-600 dark:text-gray-400">After attention processes context:</p>
+            <p className="text-sm font-bold" style={{ color: examples[sel].color }}>
+              "{examples[sel].words[examples[sel].focus]}" → {examples[sel].meaning}
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+        <p className="text-xs text-gray-700 dark:text-gray-300"><b>Key insight:</b> The initial embedding of "mole" is identical in all 3 sentences. Attention reads the surrounding tokens and <b>adds context information</b> to update the embedding so the model knows which meaning is intended.</p>
+      </div>
+    </div>
+  );
+}
+
+// tf-5: Attention Pattern — dot products, scaling, softmax
+function AttentionPatternLab() {
+  const [sentence, setSentence] = useState('A fluffy blue creature roamed');
+  const tokens = sentence.toLowerCase().split(/\s+/).filter(t => t);
+  const n = tokens.length;
+  const dk = 4;
+  // Generate Q·K scores — adjectives should attend strongly to nouns
+  const scores: number[][] = tokens.map((ti, i) => tokens.map((tj, j) => {
+    const isAdj = ['fluffy', 'blue'].includes(ti);
+    const isNoun = ['creature'].includes(tj);
+    if (isAdj && isNoun) return 2.0 + Math.sin(i + j) * 0.3;
+    if (i === j) return 1.0;
+    return -0.5 + Math.sin(i * 2.7 + j * 1.3) * 0.4;
+  }));
+  const scaled = scores.map(row => row.map(v => v / Math.sqrt(dk)));
+  const softmaxRow = (row: number[]) => { const mx = Math.max(...row); const e = row.map(v => Math.exp(v - mx)); const s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); };
+  const attn = scaled.map(softmaxRow);
+  const [selRow, setSelRow] = useState(0);
+  const [step, setStep] = useState<'raw'|'scaled'|'softmax'>('raw');
+
+  const curData = step === 'raw' ? scores : step === 'scaled' ? scaled : attn;
+
+  return (
+    <div className="space-y-4">
+      <div><label className="text-xs text-gray-600 dark:text-gray-400">Sentence:</label><input value={sentence} onChange={e => setSentence(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600" /></div>
+      <div className="flex gap-2">{(['raw', 'scaled', 'softmax'] as const).map(s => (
+        <button key={s} onClick={() => setStep(s)} className={`px-3 py-1.5 rounded text-xs font-bold ${step === s ? 'bg-purple-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
+          {s === 'raw' ? '1. Q·Kᵀ (raw)' : s === 'scaled' ? '2. ÷ √d_k (scaled)' : '3. Softmax (%)'}
+        </button>
+      ))}</div>
+      {/* Grid */}
+      <div className="overflow-x-auto">
+        <div className="inline-grid gap-1" style={{ gridTemplateColumns: `50px repeat(${n}, 48px)` }}>
+          <div />
+          {tokens.map((t, j) => <div key={j} className="text-center text-xs font-bold text-blue-500 truncate">{t}</div>)}
+          {tokens.map((t, i) => (<React.Fragment key={i}>
+            <div className="text-xs font-bold text-blue-500 text-right pr-1 self-center cursor-pointer" onClick={() => setSelRow(i)} style={{ textDecoration: selRow === i ? 'underline' : 'none' }}>{t}</div>
+            {curData[i]?.map((v, j) => (
+              <div key={j} className="h-9 rounded flex items-center justify-center text-xs font-mono font-bold transition-all" style={{
+                background: step === 'softmax' ? `rgba(168,85,247,${v * 0.85 + 0.05})` : `rgba(59,130,246,${Math.max(0, (v + 2) / 5) * 0.7 + 0.05})`,
+                color: (step === 'softmax' ? v > 0.15 : (v + 2) / 5 > 0.3) ? '#fff' : '#94a3b8',
+                border: selRow === i ? '2px solid #facc15' : '1px solid transparent'
+              }}>{step === 'softmax' ? `${(v * 100).toFixed(0)}%` : v.toFixed(2)}</div>
+            ))}
+          </React.Fragment>))}
+        </div>
+      </div>
+      {/* Selected row bar chart */}
+      <div className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">"{tokens[selRow]}" attends to:</p>
+        {tokens.map((t, j) => (
+          <div key={j} className="flex items-center gap-2 mb-1">
+            <span className="text-xs w-16 text-right font-mono text-gray-500">{t}</span>
+            <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden" style={{ maxWidth: 200 }}>
+              <div className="h-full rounded transition-all duration-500" style={{ width: `${(step === 'softmax' ? attn[selRow][j] : Math.max(0, (curData[selRow]?.[j] || 0) + 1) / 4) * 100}%`, background: '#a855f7' }} />
+            </div>
+            <span className="text-xs w-12 font-mono text-gray-600 dark:text-gray-400">{step === 'softmax' ? `${(attn[selRow][j] * 100).toFixed(0)}%` : curData[selRow]?.[j]?.toFixed(2)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// tf-6: Value weighted sum — shows how output embedding is computed
+function ValueOutputLab() {
+  const tokens = ['A', 'fluffy', 'blue', 'creature', 'roamed'];
+  const [targetIdx, setTargetIdx] = useState(3);
+  // Simulated attention weights for target token
+  const attnWeights: Record<number, number[]> = {
+    0: [0.6, 0.1, 0.1, 0.1, 0.1],
+    1: [0.05, 0.5, 0.3, 0.1, 0.05],
+    2: [0.05, 0.3, 0.5, 0.1, 0.05],
+    3: [0.07, 0.42, 0.38, 0.08, 0.05],
+    4: [0.1, 0.05, 0.05, 0.3, 0.5],
+  };
+  const values = tokens.map((t, i) => Array(6).fill(0).map((_, d) => +(Math.sin(t.charCodeAt(0) * 0.2 + d * 1.3 + i) * 0.6).toFixed(2)));
+  const weights = attnWeights[targetIdx] || attnWeights[3];
+  // Compute weighted sum
+  const output = Array(6).fill(0).map((_, d) => tokens.reduce((s, _, i) => s + weights[i] * values[i][d], 0));
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-700 dark:text-gray-300">Select a token to see how its output is computed as a <b>weighted sum</b> of all Value vectors:</p>
+      <div className="flex gap-2 flex-wrap">{tokens.map((t, i) => (
+        <button key={i} onClick={() => setTargetIdx(i)} className={`px-3 py-2 rounded-lg text-xs font-bold ${i === targetIdx ? 'bg-purple-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{t}</button>
+      ))}</div>
+      <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg space-y-3">
+        <p className="text-xs font-bold text-purple-500 mb-2">Output("{tokens[targetIdx]}") = Σ attention_weight × Value</p>
+        {tokens.map((t, i) => (
+          <div key={i} className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-mono w-8 font-bold" style={{ color: weights[i] > 0.2 ? '#a855f7' : '#64748b' }}>{(weights[i] * 100).toFixed(0)}%</span>
+            <span className="text-xs text-gray-500">×</span>
+            <span className="text-xs font-mono text-pink-500">V("{t}")</span>
+            <span className="text-xs text-gray-500">=</span>
+            <div className="flex gap-0.5">{values[i].map((v, d) => (
+              <div key={d} className="w-9 h-5 rounded text-center flex items-center justify-center" style={{
+                fontSize: 7, fontFamily: 'monospace', fontWeight: 700, color: '#fff',
+                background: `rgba(236,72,153,${Math.abs(v * weights[i]) * 3 + 0.1})`
+              }}>{(v * weights[i]).toFixed(2)}</div>
+            ))}</div>
+          </div>
+        ))}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-green-500">SUM =</span>
+            <div className="flex gap-0.5">{output.map((v, d) => (
+              <div key={d} className="w-9 h-6 rounded text-center flex items-center justify-center" style={{
+                fontSize: 8, fontFamily: 'monospace', fontWeight: 700, color: '#fff',
+                background: `rgba(34,197,94,${Math.abs(v) * 2 + 0.2})`
+              }}>{v.toFixed(2)}</div>
+            ))}</div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">This is the <b>new context-aware embedding</b> for "{tokens[targetIdx]}" — it now encodes information from all tokens, weighted by relevance.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    LESSON LAB MAPPING
    ═══════════════════════════════════════════════════════════ */
@@ -680,13 +847,13 @@ const LESSON_LABS: Record<string, { title: string; component: React.FC }> = {
   'vae-4': { title: 'Reparameterization Trick', component: ReparamLab },
   'vae-5': { title: 'Loss Calculator', component: ReparamLab },
   'vae-6': { title: 'Interpolation Lab', component: ReparamLab },
-  'tf-1': { title: 'RNN vs Transformer', component: TFComparisonLab },
-  'tf-2': { title: 'Embedding Viewer', component: EmbeddingLab },
-  'tf-3': { title: 'Positional Encoding Lab', component: PELab },
-  'tf-4': { title: 'Self-Attention Q,K,V', component: SelfAttentionLab },
-  'tf-5': { title: 'Multi-Head Attention', component: MultiHeadLab },
-  'tf-6': { title: 'Transformer Block', component: TransformerBlockLab },
-  'tf-7': { title: 'Multi-Head Attention', component: MultiHeadLab },
+  'tf-1': { title: 'The Mole Problem — Context Changes Meaning', component: ContextMeaningLab },
+  'tf-2': { title: 'Token Embedding Explorer', component: EmbeddingLab },
+  'tf-3': { title: 'Positional Encoding Visualizer', component: PELab },
+  'tf-4': { title: 'Query, Key, Value Projections', component: SelfAttentionLab },
+  'tf-5': { title: 'Attention Scores & Softmax', component: AttentionPatternLab },
+  'tf-6': { title: 'Value Weighted Sum', component: ValueOutputLab },
+  'tf-7': { title: 'Multi-Head Attention Viewer', component: MultiHeadLab },
   'tf-8': { title: 'Transformer Block Pipeline', component: TransformerBlockLab },
 };
 
