@@ -54,6 +54,17 @@ function useC() {
     popupBorder: dark ? '#334155' : '#e2e8f0',
     popupText: dark ? '#e2e8f0' : '#1e293b',
     barIdle: dark ? '#475569' : '#cbd5e1',
+    // Text on colored backgrounds (buttons with colored bg always need white)
+    textOnColoredBg: '#fff',
+    // Text on semi-transparent colored bg (light mode needs dark text)
+    textOnTintedBg: dark ? '#fff' : '#1e293b',
+    // Heatmap cell text - needs contrast against bg
+    heatText: (v: number) => {
+      if (dark) return v > 0.12 ? '#fff' : '#64748b';
+      return v > 0.25 ? '#fff' : v > 0.08 ? '#1e293b' : '#94a3b8';
+    },
+    // Heatmap cell bg alpha
+    heatAlpha: (v: number) => dark ? v * 0.8 + 0.05 : v * 0.7 + 0.12,
     dark,
   };
 }
@@ -118,7 +129,7 @@ export default function MoleProblemLab() {
           {ex.tokens.map((tok,i) => {
             const w = adjustedAttn[i];
             return <div key={i} style={{ textAlign:'center', width:60 }}>
-              <div style={{ fontSize:8, color:w>0.15?ex.color:c.textDim, fontWeight:700, marginBottom:2 }}>{(w*100).toFixed(0)}%</div>
+              <div style={{ fontSize:8, color:w>0.15?(c.dark?ex.color:ex.color):c.textDim, fontWeight:700, marginBottom:2 }}>{(w*100).toFixed(0)}%</div>
               <div style={{ height:w*40, background:rgba(ex.color, c.dark ? 0.3+w*0.5 : 0.15+w*0.4), borderRadius:4, transition:'height 0.5s', margin:'0 auto', width:30 }} />
             </div>;
           })}
@@ -178,7 +189,7 @@ export default function MoleProblemLab() {
         {step >= 4 && <div style={{ textAlign:'center', marginTop:8 }}>
           <div style={{ fontSize:9, color:'#ec4899', fontWeight:700, marginBottom:4 }}>Output = Σ(α × V)</div>
           <div style={{ display:'flex', gap:2, justifyContent:'center' }}>
-            {data.output.map((v,d) => <div key={d} style={{ width:24, height:20, borderRadius:3, display:'flex', alignItems:'center', justifyContent:'center', fontSize:7, fontWeight:700, color:'#fff', background:rgba('#ec4899', Math.abs(v)*2+0.15) }}>{v.toFixed(2)}</div>)}
+            {data.output.map((v,d) => <div key={d} style={{ width:24, height:20, borderRadius:3, display:'flex', alignItems:'center', justifyContent:'center', fontSize:7, fontWeight:700, color:c.dark?'#fff':'#fff', background:rgba('#ec4899', c.dark ? Math.abs(v)*2+0.15 : Math.abs(v)*1.5+0.35) }}>{v.toFixed(2)}</div>)}
           </div>
         </div>}
 
@@ -200,7 +211,7 @@ export default function MoleProblemLab() {
               <button key={i} onClick={() => setStep(i)}
                 style={{ padding:'4px 8px', borderRadius:5, fontSize:8, fontWeight:700,
                   background:step===i?ex.color:step>i?rgba(ex.color, c.dark?0.12:0.08):c.stepInactiveBg,
-                  color:step===i?'#fff':step>i?(c.dark?'#fff':ex.color):c.stepInactiveText,
+                  color:step===i?'#fff':step>i?ex.color:c.stepInactiveText,
                   border:`1px solid ${step===i?ex.color:step>i?rgba(ex.color,0.25):c.stepInactiveBorder}`, cursor:'pointer', transition:'all 0.2s' }}>
                 {s.label}
               </button>
@@ -247,8 +258,8 @@ export default function MoleProblemLab() {
                   const isRow = i===ex.focus;
                   const v = isRow ? adjustedAttn[j] : (i===j?0.35:0.06);
                   return <div key={j} style={{ height:22, borderRadius:3, display:'flex', alignItems:'center', justifyContent:'center', fontSize:7, fontWeight:700, fontFamily:FM,
-                    color:v>0.12?'#fff':c.textDim,
-                    background:rgba(isRow?ex.color:'#3b82f6', c.dark ? v*0.8+0.05 : v*0.6+0.03),
+                    color:c.heatText(v),
+                    background:rgba(isRow?ex.color:'#3b82f6', c.heatAlpha(v)),
                     border:isRow&&j===ex.focus?`1.5px solid ${ex.color}`:'1px solid transparent', transition:'background 0.3s' }}>
                     {step>=3 ? `${(v*100).toFixed(0)}%` : '·'}
                   </div>;
